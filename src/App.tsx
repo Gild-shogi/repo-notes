@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BackToTop } from "./components/BackToTop";
 import { RepoList } from "./components/RepoList";
 import { NoteList } from "./components/NoteList";
 import { NoteView } from "./components/NoteView";
@@ -35,6 +36,7 @@ function Main() {
   const [justCreatedFile, setJustCreatedFile] = useState<string | null>(null);
   const [repoPaneOpen, toggleRepoPane] = usePaneOpen("repos");
   const [notePaneOpen, toggleNotePane] = usePaneOpen("notes");
+  const contentPaneRef = useRef<HTMLElement | null>(null);
 
   const selectRepo = (repoKey: string) => {
     setSelectedRepoKey(repoKey);
@@ -92,7 +94,7 @@ function Main() {
           <div className="pane-status">リポジトリを選択してください。</div>
         )}
       </SidePane>
-      <main className="pane pane-content">
+      <main className="pane pane-content" ref={contentPaneRef}>
         {selectedRepoKey && selectedFileName ? (
           <NoteView
             key={`${selectedRepoKey}/${selectedFileName}`}
@@ -105,6 +107,10 @@ function Main() {
         ) : (
           <div className="pane-status">ノートを選択してください。</div>
         )}
+        <BackToTop
+          key={`btt-${selectedRepoKey}/${selectedFileName}`}
+          scrollRef={contentPaneRef}
+        />
       </main>
     </div>
   );

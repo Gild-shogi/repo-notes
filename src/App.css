@@ -228,6 +228,30 @@ body {
   flex-direction: column;
 }
 
+/* トップに戻る */
+.back-to-top {
+  position: fixed;
+  right: 28px;
+  bottom: 24px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-sub);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.back-to-top:hover {
+  color: var(--accent);
+  border-color: #bfdbfe;
+}
+
 .note-view {
   padding: 24px 32px 48px;
   max-width: 860px;
