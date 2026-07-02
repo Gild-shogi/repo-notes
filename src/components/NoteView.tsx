@@ -12,9 +12,16 @@ interface Props {
   fileName: string;
   startInEdit?: boolean;
   onDeleted: () => void;
+  onNavigateNote?: (fileName: string) => void;
 }
 
-export function NoteView({ repoKey, fileName, startInEdit = false, onDeleted }: Props) {
+export function NoteView({
+  repoKey,
+  fileName,
+  startInEdit = false,
+  onDeleted,
+  onNavigateNote,
+}: Props) {
   const [editing, setEditing] = useState(startInEdit);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const queryClient = useQueryClient();
@@ -128,7 +135,11 @@ export function NoteView({ repoKey, fileName, startInEdit = false, onDeleted }: 
             initialContent={note.raw}
           />
         ) : (
-          <MarkdownView body={note.body} notesDirAbs={notesDirAbs} />
+          <MarkdownView
+            body={note.body}
+            notesDirAbs={notesDirAbs}
+            onNavigateNote={onNavigateNote}
+          />
         )
       ) : (
         // allow-same-origin を付けないことで opaque origin となり、

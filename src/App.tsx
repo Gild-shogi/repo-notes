@@ -100,6 +100,7 @@ function Main() {
             fileName={selectedFileName}
             startInEdit={selectedFileName === justCreatedFile}
             onDeleted={() => setSelectedFileName(null)}
+            onNavigateNote={selectNote}
           />
         ) : (
           <div className="pane-status">ノートを選択してください。</div>

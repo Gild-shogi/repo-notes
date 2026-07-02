@@ -1,15 +1,18 @@
 import type { ComponentProps } from "react";
-import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
+import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { rewriteAssetUrl } from "../lib/assetUrl";
+import { classifyLink } from "../lib/links";
 import { Mermaid } from "./Mermaid";
 import "highlight.js/styles/github.css";
 
 interface Props {
   body: string;
   notesDirAbs: string;
+  onNavigateNote?: (fileName: string) => void;
 }
 
 function extractText(node: React.ReactNode): string {
@@ -46,13 +49,46 @@ function Pre({ children, ...rest }: ComponentProps<"pre">) {
   return <pre {...rest}>{children}</pre>;
 }
 
-export function MarkdownView({ body, notesDirAbs }: Props) {
+export function MarkdownView({ body, notesDirAbs, onNavigateNote }: Props) {
   const urlTransform = (url: string, key: string) => {
     if (key === "src") {
       return rewriteAssetUrl(url, notesDirAbs, convertFileSrc);
     }
-    return defaultUrlTransform(url);
+    // hrefはクリック時にインターセプトして自前で開くため元の値を保持する。
+    // ただしblocked対象（javascript:等）はhref自体を無効化する
+    return classifyLink(url, notesDirAbs).type === "blocked" ? "" : url;
   };
+
+  const handleLinkClick = (href: string) => {
+    const action = classifyLink(href, notesDirAbs);
+    switch (action.type) {
+      case "url":
+        void openUrl(action.target);
+        break;
+      case "path":
+        void openPath(action.target);
+        break;
+      case "note":
+        onNavigateNote?.(action.target);
+        break;
+      case "blocked":
+        break;
+    }
+  };
+
+  const Anchor = ({ href, children, ...rest }: ComponentProps<"a">) => (
+    <a
+      {...rest}
+      href={href}
+      title={href}
+      onClick={(e) => {
+        e.preventDefault();
+        if (href) handleLinkClick(href);
+      }}
+    >
+      {children}
+    </a>
+  );
 
   return (
     <div className="markdown-body">
@@ -60,7 +96,7 @@ export function MarkdownView({ body, notesDirAbs }: Props) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
         urlTransform={urlTransform}
-        components={{ code: Code, pre: Pre }}
+        components={{ code: Code, pre: Pre, a: Anchor }}
       >
         {body}
       </ReactMarkdown>

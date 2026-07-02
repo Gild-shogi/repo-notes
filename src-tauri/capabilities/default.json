@@ -5,9 +5,10 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "opener:default",
     {
       "identifier": "opener:allow-open-path",
-      "allow": [{ "path": "$HOME/.repo-notes/**" }]
+      "allow": [{ "path": "$HOME/**" }]
     },
     {
       "identifier": "opener:allow-reveal-item-in-dir",
