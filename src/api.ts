@@ -5,8 +5,11 @@ export const getDataRoot = () => invoke<string>("get_data_root");
 
 export const listRepos = () => invoke<RepoSummary[]>("list_repos");
 
-export const listNotes = (repoKey: string) =>
-  invoke<NoteSummary[]>("list_notes", { repoKey });
+export const listNotes = (repoKey: string, query?: string) =>
+  invoke<NoteSummary[]>("list_notes", { repoKey, query: query ?? null });
+
+export const setPinned = (repoKey: string, fileName: string, pinned: boolean) =>
+  invoke<void>("set_pinned", { repoKey, fileName, pinned });
 
 export const readNote = (repoKey: string, fileName: string) =>
   invoke<NoteContent>("read_note", { repoKey, fileName });

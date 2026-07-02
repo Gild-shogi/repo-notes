@@ -12,8 +12,13 @@ pub fn list_repos() -> Vec<RepoSummary> {
 }
 
 #[tauri::command]
-pub fn list_notes(repo_key: String) -> Result<Vec<NoteSummary>, String> {
-    store::list_notes(&store::data_root(), &repo_key)
+pub fn list_notes(repo_key: String, query: Option<String>) -> Result<Vec<NoteSummary>, String> {
+    store::list_notes(&store::data_root(), &repo_key, query.as_deref())
+}
+
+#[tauri::command]
+pub fn set_pinned(repo_key: String, file_name: String, pinned: bool) -> Result<(), String> {
+    store::set_pinned(&store::data_root(), &repo_key, &file_name, pinned)
 }
 
 #[tauri::command]

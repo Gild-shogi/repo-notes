@@ -77,6 +77,27 @@ body {
   font-size: 12px;
 }
 
+/* ノート検索 */
+.note-search {
+  padding: 4px 12px 8px;
+}
+
+.note-search input {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-sub);
+}
+
+.note-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
 /* リポジトリ / ノート一覧 */
 .repo-list,
 .note-list {
@@ -85,8 +106,44 @@ body {
   padding: 4px 8px 16px;
 }
 
+.note-list li {
+  position: relative;
+}
+
+.note-list li > button:first-child {
+  padding-right: 32px;
+}
+
+.pin-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  padding: 4px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.note-list li:hover .pin-btn,
+.pin-btn.pinned {
+  opacity: 1;
+}
+
+.pin-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.pin-btn.pinned {
+  color: var(--accent);
+}
+
 .repo-list button,
-.note-list button {
+.note-list li > button:first-child {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -102,12 +159,12 @@ body {
 }
 
 .repo-list button:hover,
-.note-list button:hover {
+.note-list li > button:first-child:hover {
   background: rgba(0, 0, 0, 0.04);
 }
 
 .repo-list button.selected,
-.note-list button.selected {
+.note-list li > button:first-child.selected {
   background: var(--accent-bg);
   color: var(--accent);
 }

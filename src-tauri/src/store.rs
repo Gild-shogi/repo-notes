@@ -116,8 +116,14 @@ fn list_note_files(notes_dir: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
-pub fn list_notes(root: &Path, repo_key: &str) -> Result<Vec<NoteSummary>, String> {
+pub fn list_notes(
+    root: &Path,
+    repo_key: &str,
+    query: Option<&str>,
+) -> Result<Vec<NoteSummary>, String> {
     let dir = notes_dir(root, repo_key)?;
+    let pins = load_pins(root, repo_key);
+    let query = query.map(str::trim).filter(|q| !q.is_empty()).map(str::to_lowercase);
     let mut notes: Vec<NoteSummary> = list_note_files(&dir)
         .into_iter()
         .filter_map(|path| {
@@ -125,7 +131,17 @@ pub fn list_notes(root: &Path, repo_key: &str) -> Result<Vec<NoteSummary>, Strin
             let kind = note_kind(&file_name).ok()?;
             let content = fs::read_to_string(&path).ok()?;
             let (meta, title) = resolve_meta(kind, &content, &file_name);
+            if let Some(q) = &query {
+                let matches = title.to_lowercase().contains(q)
+                    || file_name.to_lowercase().contains(q)
+                    || meta.tags.iter().any(|t| t.to_lowercase().contains(q))
+                    || content.to_lowercase().contains(q);
+                if !matches {
+                    return None;
+                }
+            }
             Some(NoteSummary {
+                pinned: pins.contains(&file_name),
                 file_name,
                 kind,
                 title,
@@ -135,9 +151,55 @@ pub fn list_notes(root: &Path, repo_key: &str) -> Result<Vec<NoteSummary>, Strin
             })
         })
         .collect();
-    // ファイル名が YYYY-MM-DD プレフィックスなので名前降順 ≒ 新しい順
-    notes.sort_by(|a, b| b.file_name.cmp(&a.file_name));
+    // ピン留めを先頭に、あとはファイル名の YYYY-MM-DD プレフィックスで新しい順
+    notes.sort_by(|a, b| {
+        b.pinned
+            .cmp(&a.pinned)
+            .then_with(|| b.file_name.cmp(&a.file_name))
+    });
     Ok(notes)
+}
+
+/// アプリが管理するピン留め状態（repos/<key>/pins.json）。
+/// meta.json と異なりアプリ側が読み書きする。
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct Pins {
+    pinned: Vec<String>,
+}
+
+fn pins_path(root: &Path, repo_key: &str) -> PathBuf {
+    root.join("repos").join(repo_key).join("pins.json")
+}
+
+fn load_pins(root: &Path, repo_key: &str) -> std::collections::HashSet<String> {
+    fs::read_to_string(pins_path(root, repo_key))
+        .ok()
+        .and_then(|s| serde_json::from_str::<Pins>(&s).ok())
+        .map(|p| p.pinned.into_iter().collect())
+        .unwrap_or_default()
+}
+
+pub fn set_pinned(
+    root: &Path,
+    repo_key: &str,
+    file_name: &str,
+    pinned: bool,
+) -> Result<(), String> {
+    // 実在するノートのみピン留め可能（パス検証込み）
+    let path = note_path(root, repo_key, file_name)?;
+    if pinned && !path.is_file() {
+        return Err(format!("ノートが存在しません: {file_name}"));
+    }
+    let mut pins: Vec<String> = load_pins(root, repo_key).into_iter().collect();
+    pins.retain(|f| f != file_name);
+    if pinned {
+        pins.push(file_name.to_string());
+    }
+    pins.sort();
+    let json = serde_json::to_string_pretty(&Pins { pinned: pins })
+        .map_err(|e| format!("ピン状態のシリアライズに失敗: {e}"))?;
+    fs::write(pins_path(root, repo_key), json)
+        .map_err(|e| format!("ピン状態の保存に失敗: {e}"))
 }
 
 /// メタデータとタイトル（フォールバック解決済み）を返す。
@@ -284,6 +346,8 @@ pub fn delete_note(root: &Path, repo_key: &str, file_name: &str) -> Result<(), S
             let _ = fs::remove_dir_all(&assets);
         }
     }
+    // ピン留めされていれば解除しておく
+    let _ = set_pinned(root, repo_key, file_name, false);
     Ok(())
 }
 
@@ -340,12 +404,12 @@ mod tests {
         assert_eq!(note.meta.title.as_deref(), Some("更新後"));
         assert_eq!(note.body, "\n# 中身\n");
 
-        let notes = list_notes(tmp.path(), key).unwrap();
+        let notes = list_notes(tmp.path(), key, None).unwrap();
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].title, "更新後");
 
         delete_note(tmp.path(), key, &file_name).unwrap();
-        assert!(list_notes(tmp.path(), key).unwrap().is_empty());
+        assert!(list_notes(tmp.path(), key, None).unwrap().is_empty());
     }
 
     #[test]
@@ -395,9 +459,76 @@ mod tests {
             r#"<!-- repo-notes-meta {"title":"グラフ","created":"2026-07-02T09:00:00+09:00"} --><html></html>"#,
         )
         .unwrap();
-        let notes = list_notes(tmp.path(), key).unwrap();
+        let notes = list_notes(tmp.path(), key, None).unwrap();
         assert_eq!(notes[0].title, "グラフ");
         assert_eq!(notes[0].kind, NoteKind::Html);
+    }
+
+    #[test]
+    fn search_matches_title_body_and_tags() {
+        let tmp = tempfile::tempdir().unwrap();
+        setup_repo(tmp.path(), "demo--12345678");
+        let key = "demo--12345678";
+        let dir = tmp.path().join("repos").join(key).join("notes");
+        fs::write(
+            dir.join("2026-07-01-auth.md"),
+            "---\ntitle: 認証フロー\ncreated: 2026-07-01\ntags: [Auth]\n---\n\nOAuthの仕組み\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("2026-07-02-db.md"),
+            "---\ntitle: DB設計\ncreated: 2026-07-02\ntags: [database]\n---\n\nテーブル一覧\n",
+        )
+        .unwrap();
+
+        // タイトル一致
+        let hit = list_notes(tmp.path(), key, Some("認証")).unwrap();
+        assert_eq!(hit.len(), 1);
+        assert_eq!(hit[0].file_name, "2026-07-01-auth.md");
+        // 本文一致（大文字小文字を無視）
+        assert_eq!(list_notes(tmp.path(), key, Some("oauth")).unwrap().len(), 1);
+        // タグ一致
+        assert_eq!(list_notes(tmp.path(), key, Some("auth")).unwrap().len(), 1);
+        // 不一致
+        assert!(list_notes(tmp.path(), key, Some("存在しない語")).unwrap().is_empty());
+        // 空クエリは全件
+        assert_eq!(list_notes(tmp.path(), key, Some("  ")).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn pin_sorts_first_and_survives_reload() {
+        let tmp = tempfile::tempdir().unwrap();
+        setup_repo(tmp.path(), "demo--12345678");
+        let key = "demo--12345678";
+        let dir = tmp.path().join("repos").join(key).join("notes");
+        fs::write(dir.join("2026-07-01-old.md"), "old\n").unwrap();
+        fs::write(dir.join("2026-07-02-new.md"), "new\n").unwrap();
+
+        set_pinned(tmp.path(), key, "2026-07-01-old.md", true).unwrap();
+        let notes = list_notes(tmp.path(), key, None).unwrap();
+        assert_eq!(notes[0].file_name, "2026-07-01-old.md");
+        assert!(notes[0].pinned);
+        assert!(!notes[1].pinned);
+
+        // 解除で通常の並びに戻る
+        set_pinned(tmp.path(), key, "2026-07-01-old.md", false).unwrap();
+        let notes = list_notes(tmp.path(), key, None).unwrap();
+        assert_eq!(notes[0].file_name, "2026-07-02-new.md");
+
+        // 存在しないノートはピン留め不可
+        assert!(set_pinned(tmp.path(), key, "missing.md", true).is_err());
+    }
+
+    #[test]
+    fn delete_note_removes_pin() {
+        let tmp = tempfile::tempdir().unwrap();
+        setup_repo(tmp.path(), "demo--12345678");
+        let key = "demo--12345678";
+        let dir = tmp.path().join("repos").join(key).join("notes");
+        fs::write(dir.join("2026-07-01-a.md"), "a\n").unwrap();
+        set_pinned(tmp.path(), key, "2026-07-01-a.md", true).unwrap();
+        delete_note(tmp.path(), key, "2026-07-01-a.md").unwrap();
+        assert!(load_pins(tmp.path(), key).is_empty());
     }
 
     #[test]

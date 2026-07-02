@@ -18,6 +18,20 @@ export function RepoIcon() {
   );
 }
 
+export function PinIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M9 4h6l-1 6 3.5 3.5v1.5h-5V21l-.5 1-.5-1v-6H6.5v-1.5L10 10z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        fill={filled ? "currentColor" : "none"}
+      />
+    </svg>
+  );
+}
+
 export function NoteIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">

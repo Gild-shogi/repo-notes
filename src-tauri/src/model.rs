@@ -55,6 +55,7 @@ pub struct NoteSummary {
     pub created: Option<String>,
     pub updated_ms: i64,
     pub tags: Vec<String>,
+    pub pinned: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]

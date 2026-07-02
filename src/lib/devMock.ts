@@ -53,6 +53,7 @@ export function installDevMock() {
     ["2026-07-02-architecture.md", { raw: MD_FIXTURE, kind: "md" }],
     ["2026-07-02-viz.html", { raw: HTML_FIXTURE, kind: "html" }],
   ]);
+  const pins = new Set<string>();
 
   const parseFrontmatter = (raw: string) => {
     const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
@@ -93,6 +94,7 @@ export function installDevMock() {
       created: meta.created ?? null,
       updatedMs: Date.now(),
       tags: meta.tags ?? [],
+      pinned: pins.has(fileName),
     };
   };
 
@@ -110,10 +112,29 @@ export function installDevMock() {
             lastNoteAtMs: Date.now(),
           },
         ];
-      case "list_notes":
+      case "list_notes": {
+        const q = ((args.query as string | null) ?? "").trim().toLowerCase();
         return [...notes.entries()]
+          .filter(
+            ([name, note]) =>
+              !q ||
+              name.toLowerCase().includes(q) ||
+              note.raw.toLowerCase().includes(q) ||
+              summarize(name, note).title.toLowerCase().includes(q),
+          )
           .map(([name, note]) => summarize(name, note))
-          .sort((a, b) => b.fileName.localeCompare(a.fileName));
+          .sort(
+            (a, b) =>
+              Number(b.pinned) - Number(a.pinned) ||
+              b.fileName.localeCompare(a.fileName),
+          );
+      }
+      case "set_pinned": {
+        const fileName = args.fileName as string;
+        if (args.pinned) pins.add(fileName);
+        else pins.delete(fileName);
+        return null;
+      }
       case "read_note": {
         const fileName = args.fileName as string;
         const note = notes.get(fileName);

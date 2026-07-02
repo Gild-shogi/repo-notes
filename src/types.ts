@@ -15,6 +15,7 @@ export interface NoteSummary {
   created: string | null;
   updatedMs: number;
   tags: string[];
+  pinned: boolean;
 }
 
 export interface NoteMeta {
