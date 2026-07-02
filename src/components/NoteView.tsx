@@ -4,8 +4,10 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { deleteNote, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
+import { extractToc } from "../lib/toc";
 import { MarkdownView } from "./MarkdownView";
 import { NoteEditor } from "./NoteEditor";
+import { Toc } from "./Toc";
 
 interface Props {
   repoKey: string;
@@ -135,11 +137,14 @@ export function NoteView({
             initialContent={note.raw}
           />
         ) : (
-          <MarkdownView
-            body={note.body}
-            notesDirAbs={notesDirAbs}
-            onNavigateNote={onNavigateNote}
-          />
+          <>
+            <Toc items={extractToc(note.body)} />
+            <MarkdownView
+              body={note.body}
+              notesDirAbs={notesDirAbs}
+              onNavigateNote={onNavigateNote}
+            />
+          </>
         )
       ) : (
         // allow-same-origin を付けないことで opaque origin となり、

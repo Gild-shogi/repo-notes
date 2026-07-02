@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import rehypeSlug from "rehype-slug";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { openLocalPath } from "../api";
@@ -96,7 +97,7 @@ export function MarkdownView({ body, notesDirAbs, onNavigateNote }: Props) {
     <div className="markdown-body">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        rehypePlugins={[rehypeHighlight, rehypeSlug]}
         urlTransform={urlTransform}
         components={{ code: Code, pre: Pre, a: Anchor }}
       >

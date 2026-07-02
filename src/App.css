@@ -447,6 +447,79 @@ body {
   color: #7d8590 !important;
 }
 
+/* 目次 */
+.toc {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-sub);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.toc-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sub);
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.toc-toggle:hover {
+  color: var(--text);
+}
+
+.toc-chevron {
+  display: inline-block;
+  transition: transform 0.15s;
+  font-size: 10px;
+}
+
+.toc-chevron.open {
+  transform: rotate(90deg);
+}
+
+.toc-count {
+  font-weight: 400;
+  color: var(--text-sub);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 10px;
+}
+
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 2px 14px 12px;
+}
+
+.toc-list button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  border: none;
+  background: transparent;
+  padding: 3px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.toc-list button:hover {
+  color: var(--accent);
+  background: rgba(37, 99, 235, 0.06);
+}
+
 /* Markdownレンダリング */
 .markdown-body {
   font-size: 14px;
