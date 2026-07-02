@@ -67,6 +67,7 @@ mise install          # Node 24 / pnpm 11
 pnpm install
 pnpm tauri dev        # 開発起動
 pnpm tauri build      # ビルド
+make release          # 起動中アプリを終了 → ビルド → /Applications へ再配置 → 起動
 ```
 
 ### テスト
