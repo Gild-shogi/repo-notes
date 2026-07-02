@@ -372,3 +372,44 @@ body {
 .markdown-body a {
   color: var(--accent);
 }
+
+/* Mermaid */
+.mermaid-block {
+  display: flex;
+  justify-content: center;
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.mermaid-block.loading {
+  color: var(--text-sub);
+  font-size: 12px;
+  justify-content: flex-start;
+}
+
+.mermaid-error {
+  flex-direction: column;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+/* mermaidブロックを含むpreの装飾はPreコンポーネント側で外している */
+
+/* HTMLノート */
+.note-view--html {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 16px;
+}
+
+.html-note-frame {
+  flex: 1;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  min-height: 0;
+}

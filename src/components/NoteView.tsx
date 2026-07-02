@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { deleteNote, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
 import { MarkdownView } from "./MarkdownView";
@@ -44,7 +45,7 @@ export function NoteView({ repoKey, fileName, startInEdit = false, onDeleted }: 
   );
 
   return (
-    <article className="note-view">
+    <article className={`note-view ${note.kind === "html" ? "note-view--html" : ""}`}>
       <header className="note-header">
         <div className="note-header-row">
           <h1>{note.meta.title}</h1>
@@ -113,7 +114,14 @@ export function NoteView({ repoKey, fileName, startInEdit = false, onDeleted }: 
           <MarkdownView body={note.body} notesDirAbs={notesDirAbs} />
         )
       ) : (
-        <div className="pane-status">HTMLノートの表示は未対応です。</div>
+        // allow-same-origin を付けないことで opaque origin となり、
+        // ノート内JSから親DOM・Tauri IPCへは到達できない
+        <iframe
+          className="html-note-frame"
+          src={convertFileSrc(note.absPath)}
+          sandbox="allow-scripts"
+          title={note.meta.title ?? note.fileName}
+        />
       )}
     </article>
   );
