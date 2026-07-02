@@ -196,6 +196,124 @@ body {
   color: var(--text-sub);
 }
 
+.note-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.note-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+/* ボタン */
+.btn {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--bg-sub);
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* ノートペインのヘッダーと新規作成 */
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 12px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+
+.pane-header .pane-title {
+  position: static;
+}
+
+.new-note-form {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  align-items: center;
+}
+
+.new-note-form input {
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* エディタ */
+.note-editor {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sub);
+}
+
+.editor-status {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.editor-status.dirty {
+  color: #b26a00;
+}
+
+.editor-status.error {
+  color: var(--danger);
+}
+
+.note-editor .cm-editor {
+  font-size: 13px;
+}
+
+.note-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
 /* Markdownレンダリング */
 .markdown-body {
   font-size: 14px;
