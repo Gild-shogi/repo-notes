@@ -31,6 +31,7 @@ body {
 
 .layout {
   display: grid;
+  /* 列幅は折りたたみ状態に応じてインラインstyleで指定される */
   grid-template-columns: 240px 300px 1fr;
   height: 100vh;
 }
@@ -46,6 +47,7 @@ body {
 }
 
 .pane-notes {
+  background: var(--bg);
   border-right: 1px solid var(--border);
 }
 
@@ -243,20 +245,62 @@ body {
   color: #fff;
 }
 
-/* ノートペインのヘッダーと新規作成 */
+/* サイドペインのヘッダー */
 .pane-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-right: 12px;
+  padding-right: 8px;
   position: sticky;
   top: 0;
-  background: var(--bg);
+  background: inherit;
   z-index: 1;
 }
 
 .pane-header .pane-title {
   position: static;
+}
+
+.pane-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-btn {
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 7px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text);
+}
+
+/* 折りたたみ状態のペイン（アイコンのみ表示、クリックで展開） */
+.pane.collapsed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.pane.collapsed:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.pane.collapsed .icon-btn {
+  padding: 6px;
+  display: flex;
 }
 
 .new-note-form {
