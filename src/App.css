@@ -1,116 +1,256 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
-}
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+  --bg: #ffffff;
+  --bg-sub: #f6f7f9;
+  --border: #e3e6ea;
+  --text: #1f2328;
+  --text-sub: #656d76;
+  --accent: #2563eb;
+  --accent-bg: #eff4ff;
+  --danger: #d1242f;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP",
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  background-color: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 }
 
-.container {
+* {
+  box-sizing: border-box;
+}
+
+body {
   margin: 0;
-  padding-top: 10vh;
+  overflow: hidden;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 240px 300px 1fr;
+  height: 100vh;
+}
+
+.pane {
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.pane-repos {
+  background: var(--bg-sub);
+  border-right: 1px solid var(--border);
+}
+
+.pane-notes {
+  border-right: 1px solid var(--border);
+}
+
+.pane-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+  padding: 14px 16px 6px;
+  position: sticky;
+  top: 0;
+  background: inherit;
+}
+
+.pane-status {
+  padding: 16px;
+  color: var(--text-sub);
+}
+
+.pane-status.error {
+  color: var(--danger);
+}
+
+.pane-status .hint {
+  font-size: 12px;
+}
+
+/* リポジトリ / ノート一覧 */
+.repo-list,
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 8px 16px;
+}
+
+.repo-list button,
+.note-list button {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  border: none;
   border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
+  background: transparent;
+  padding: 8px 10px;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
 }
 
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
+.repo-list button:hover,
+.note-list button:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 
-input,
-button {
-  outline: none;
+.repo-list button.selected,
+.note-list button.selected {
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 
-#greet-input {
-  margin-right: 5px;
+.repo-name {
+  font-weight: 600;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
+.repo-url {
+  font-size: 11px;
+  color: var(--text-sub);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
 
-  a:hover {
-    color: #24c8db;
-  }
+.repo-meta,
+.note-meta {
+  font-size: 11px;
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
+.note-title {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--bg-sub);
+  border: 1px solid var(--border);
+  color: var(--text-sub);
+}
+
+.badge.html {
+  background: #fff3e0;
+  border-color: #ffcc80;
+  color: #b26a00;
+}
+
+.badge.tag {
+  background: var(--accent-bg);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+/* ノート本文 */
+.pane-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.note-view {
+  padding: 24px 32px 48px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.note-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.note-header h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  line-height: 1.4;
+}
+
+.note-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+/* Markdownレンダリング */
+.markdown-body {
+  font-size: 14px;
+}
+
+.markdown-body h1,
+.markdown-body h2 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.2em;
+}
+
+.markdown-body pre {
+  background: var(--bg-sub);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+
+.markdown-body code {
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 12.5px;
+}
+
+.markdown-body :not(pre) > code {
+  background: var(--bg-sub);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+}
+
+.markdown-body img {
+  max-width: 100%;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+}
+
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+}
+
+.markdown-body th {
+  background: var(--bg-sub);
+}
+
+.markdown-body blockquote {
+  margin: 0;
+  padding-left: 1em;
+  border-left: 3px solid var(--border);
+  color: var(--text-sub);
+}
+
+.markdown-body a {
+  color: var(--accent);
 }

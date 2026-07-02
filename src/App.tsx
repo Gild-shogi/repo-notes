@@ -1,51 +1,58 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RepoList } from "./components/RepoList";
+import { NoteList } from "./components/NoteList";
+import { NoteView } from "./components/NoteView";
 import "./App.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 5_000, retry: 1 },
+  },
+});
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+function Main() {
+  const [selectedRepoKey, setSelectedRepoKey] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+
+  const selectRepo = (repoKey: string) => {
+    setSelectedRepoKey(repoKey);
+    setSelectedFileName(null);
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <div className="layout">
+      <aside className="pane pane-repos">
+        <h2 className="pane-title">リポジトリ</h2>
+        <RepoList selectedRepoKey={selectedRepoKey} onSelect={selectRepo} />
+      </aside>
+      <aside className="pane pane-notes">
+        <h2 className="pane-title">ノート</h2>
+        {selectedRepoKey ? (
+          <NoteList
+            repoKey={selectedRepoKey}
+            selectedFileName={selectedFileName}
+            onSelect={setSelectedFileName}
+          />
+        ) : (
+          <div className="pane-status">リポジトリを選択してください。</div>
+        )}
+      </aside>
+      <main className="pane pane-content">
+        {selectedRepoKey && selectedFileName ? (
+          <NoteView repoKey={selectedRepoKey} fileName={selectedFileName} />
+        ) : (
+          <div className="pane-status">ノートを選択してください。</div>
+        )}
+      </main>
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Main />
+    </QueryClientProvider>
+  );
+}
