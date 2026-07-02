@@ -83,6 +83,11 @@ pnpm test:skill                                    # repo-key導出のshellテ�
 make install-skill    # ~/.claude/skills/repo-notes と ~/.agents/skills/repo-notes にコピー
 ```
 
+### デバッグ
+
+- **ブラウザ単体モード**: `pnpm dev` で起動した vite（http://localhost:1420）をブラウザで直接開くと、Tauri APIモック（`src/lib/devMock.ts`、devビルド限定）によりフィクスチャデータでUIを確認できる。レイアウト・Markdown・Mermaid・編集フローの確認に使う。画像・HTMLノートのiframeはasset protocolが無いため表示されない
+- **tauri-mcp**: `cargo install --git https://github.com/dirvine/tauri-mcp` で入る MCP サーバー/CLI。`tauri-mcp tool launch_app '{"app_path":"..."}'` でアプリ起動、`take_screenshot` で画面キャプチャができる（キャプチャには端末アプリへの「画面収録」権限が必要）。macOS では `execute_js` は使えない（WKWebViewがDevToolsのHTTPエンドポイントを持たないため）
+
 ## 制限事項
 
 - `REPO_NOTES_DIR` を上書きした場合、assetProtocol の scope（`$HOME/.repo-notes/**` 固定）と齟齬が出るため、アプリでの画像表示に制限がある
