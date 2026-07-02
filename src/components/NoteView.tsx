@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { deleteNote, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
 import { MarkdownView } from "./MarkdownView";
@@ -50,6 +51,22 @@ export function NoteView({ repoKey, fileName, startInEdit = false, onDeleted }: 
         <div className="note-header-row">
           <h1>{note.meta.title}</h1>
           <div className="note-actions">
+            <button
+              type="button"
+              className="btn"
+              title="デフォルトのアプリで開く"
+              onClick={() => openPath(note.absPath)}
+            >
+              エディタで開く
+            </button>
+            <button
+              type="button"
+              className="btn"
+              title="Finderで表示"
+              onClick={() => revealItemInDir(note.absPath)}
+            >
+              Finder
+            </button>
             {note.kind === "md" && (
               <button
                 type="button"
