@@ -10,7 +10,11 @@ function loadMermaid() {
       startOnLoad: false,
       securityLevel: "strict",
       theme: "neutral",
-    });
+      // foreignObjectによるHTMLラベルはDOMPurifyやWebKitと相性が悪いためSVGテキストで描画する
+      // （v11はノード形状がトップレベルのhtmlLabelsを参照するため両方に指定する）
+      htmlLabels: false,
+      flowchart: { htmlLabels: false },
+    } as Parameters<typeof mermaid.initialize>[0]);
     return mermaid;
   });
   return mermaidPromise;
