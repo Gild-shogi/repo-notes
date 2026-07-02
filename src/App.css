@@ -380,8 +380,15 @@ body {
 /* エディタ */
 .note-editor {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
+  background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.note-editor:focus-within {
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
 .editor-toolbar {
@@ -389,7 +396,7 @@ body {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-sub);
 }
@@ -397,22 +404,47 @@ body {
 .editor-status {
   font-size: 12px;
   color: var(--text-sub);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.editor-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
 }
 
 .editor-status.dirty {
   color: #b26a00;
 }
 
+.editor-status.dirty::before {
+  background: #f59e0b;
+}
+
 .editor-status.error {
   color: var(--danger);
 }
 
-.note-editor .cm-editor {
-  font-size: 13px;
+.editor-status.error::before {
+  background: var(--danger);
 }
 
 .note-editor .cm-editor.cm-focused {
   outline: none;
+}
+
+/* frontmatterブロックはメタ情報として控えめに表示（editorTheme.tsのプラグインが付与） */
+.note-editor .cm-frontmatter,
+.note-editor .cm-frontmatter span {
+  font-family: "SF Mono", ui-monospace, Menlo, monospace !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  color: #7d8590 !important;
 }
 
 /* Markdownレンダリング */

@@ -5,6 +5,7 @@ import { languages } from "@codemirror/language-data";
 import { keymap, EditorView } from "@codemirror/view";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { writeNote } from "../api";
+import { editorExtensions } from "../lib/editorTheme";
 
 interface Props {
   repoKey: string;
@@ -39,6 +40,7 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
     () => [
       markdown({ base: markdownLanguage, codeLanguages: languages }),
       EditorView.lineWrapping,
+      ...editorExtensions,
       keymap.of([
         {
           key: "Mod-s",
@@ -87,7 +89,13 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
           if (dirty) saveRef.current();
         }}
         autoFocus
-        basicSetup={{ lineNumbers: false, foldGutter: false }}
+        basicSetup={{
+          lineNumbers: false,
+          foldGutter: false,
+          highlightActiveLine: false,
+          highlightActiveLineGutter: false,
+          highlightSelectionMatches: false,
+        }}
       />
     </div>
   );
