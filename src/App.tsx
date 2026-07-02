@@ -4,6 +4,7 @@ import { RepoList } from "./components/RepoList";
 import { NoteList } from "./components/NoteList";
 import { NoteView } from "./components/NoteView";
 import { NewNoteButton } from "./components/NewNoteButton";
+import { useLiveUpdates } from "./lib/useLiveUpdates";
 import "./App.css";
 
 const queryClient = new QueryClient({
@@ -13,6 +14,7 @@ const queryClient = new QueryClient({
 });
 
 function Main() {
+  useLiveUpdates();
   const [selectedRepoKey, setSelectedRepoKey] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [justCreatedFile, setJustCreatedFile] = useState<string | null>(null);
