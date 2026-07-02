@@ -3,7 +3,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { openLocalPath } from "../api";
 import { rewriteAssetUrl } from "../lib/assetUrl";
 import { classifyLink } from "../lib/links";
 import { Mermaid } from "./Mermaid";
@@ -66,7 +67,8 @@ export function MarkdownView({ body, notesDirAbs, onNavigateNote }: Props) {
         void openUrl(action.target);
         break;
       case "path":
-        void openPath(action.target);
+        // Rust側でhome配下・実行系拡張子でない・実在することを検証して開く
+        void openLocalPath(action.target);
         break;
       case "note":
         onNavigateNote?.(action.target);

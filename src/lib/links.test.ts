@@ -52,8 +52,11 @@ describe("classifyLink", () => {
     });
   });
 
-  it("相対パスのトラバーサルはブロック", () => {
+  it("トラバーサルは形式を問わずブロック", () => {
     expect(classifyLink("../secret.md", notesDir).type).toBe("blocked");
     expect(classifyLink("assets/../../x.pdf", notesDir).type).toBe("blocked");
+    expect(classifyLink("~/../other-user/x.md", notesDir).type).toBe("blocked");
+    expect(classifyLink("/Users/me/../root/x.md", notesDir).type).toBe("blocked");
+    expect(classifyLink("file:///Users/me/../etc/passwd", notesDir).type).toBe("blocked");
   });
 });

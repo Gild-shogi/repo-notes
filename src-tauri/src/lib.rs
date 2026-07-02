@@ -1,5 +1,6 @@
 mod commands;
 mod model;
+mod open_link;
 mod parse;
 mod store;
 mod watch;
@@ -21,6 +22,7 @@ pub fn run() {
             commands::create_note,
             commands::delete_note,
             commands::set_pinned,
+            open_link::open_local_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

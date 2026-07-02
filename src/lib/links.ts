@@ -24,12 +24,16 @@ export function classifyLink(href: string, notesDirAbs: string): LinkAction {
   if (!trimmed || trimmed.startsWith("#")) return { type: "blocked" };
   if (/^(https?|mailto):/i.test(trimmed)) return { type: "url", target: trimmed };
   if (/^file:\/\//i.test(trimmed)) {
-    return { type: "path", target: safeDecode(trimmed.replace(/^file:\/\/(localhost)?/i, "")) };
+    const path = safeDecode(trimmed.replace(/^file:\/\/(localhost)?/i, ""));
+    if (path.split("/").includes("..")) return { type: "blocked" };
+    return { type: "path", target: path };
   }
   // http/https/mailto/file 以外のスキームは開かない（javascript:等の排除を含む）
   if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return { type: "blocked" };
 
   const decoded = safeDecode(trimmed);
+  // どの形式でも `..` による遡りは禁止（最終検証はRust側でも行う）
+  if (decoded.split("/").includes("..")) return { type: "blocked" };
   if (decoded.startsWith("~/")) {
     const home = notesDirAbs.match(/^\/Users\/[^/]+/)?.[0];
     if (!home) return { type: "blocked" };
@@ -37,8 +41,6 @@ export function classifyLink(href: string, notesDirAbs: string): LinkAction {
   }
   if (decoded.startsWith("/")) return { type: "path", target: decoded };
 
-  // ノートディレクトリからの相対パス（上位への遡りは禁止）
-  if (decoded.split("/").includes("..")) return { type: "blocked" };
   const rel = decoded.replace(/^\.\//, "");
   if (!rel.includes("/") && /\.(md|html)$/i.test(rel)) {
     return { type: "note", target: rel };
