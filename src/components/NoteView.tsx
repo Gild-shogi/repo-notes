@@ -5,6 +5,7 @@ import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { deleteNote, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
 import { extractToc } from "../lib/toc";
+import { EditIcon, EyeIcon, FolderIcon, OpenExternalIcon, TrashIcon } from "./icons";
 import { MarkdownView } from "./MarkdownView";
 import { NoteEditor } from "./NoteEditor";
 import { Toc } from "./Toc";
@@ -62,27 +63,31 @@ export function NoteView({
           <div className="note-actions">
             <button
               type="button"
-              className="btn"
-              title="デフォルトのアプリで開く"
+              className="icon-action"
+              title="エディタで開く"
+              aria-label="エディタで開く"
               onClick={() => openPath(note.absPath)}
             >
-              エディタで開く
+              <OpenExternalIcon />
             </button>
             <button
               type="button"
-              className="btn"
+              className="icon-action"
               title="Finderで表示"
+              aria-label="Finderで表示"
               onClick={() => revealItemInDir(note.absPath)}
             >
-              Finder
+              <FolderIcon />
             </button>
             {note.kind === "md" && (
               <button
                 type="button"
-                className="btn"
+                className="icon-action"
+                title={editing ? "プレビューに戻る" : "編集"}
+                aria-label={editing ? "プレビューに戻る" : "編集"}
                 onClick={() => setEditing((v) => !v)}
               >
-                {editing ? "プレビュー" : "編集"}
+                {editing ? <EyeIcon /> : <EditIcon />}
               </button>
             )}
             {confirmingDelete ? (
@@ -106,10 +111,12 @@ export function NoteView({
             ) : (
               <button
                 type="button"
-                className="btn"
+                className="icon-action danger"
+                title="削除"
+                aria-label="削除"
                 onClick={() => setConfirmingDelete(true)}
               >
-                削除
+                <TrashIcon />
               </button>
             )}
           </div>

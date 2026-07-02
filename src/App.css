@@ -302,6 +302,30 @@ body {
   color: #fff;
 }
 
+/* ノートヘッダのアイコンアクション */
+.icon-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text-sub);
+  cursor: pointer;
+}
+
+.icon-action:hover {
+  background: var(--bg-sub);
+  color: var(--text);
+}
+
+.icon-action.danger:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: var(--danger);
+}
+
 /* サイドペインのヘッダー */
 .pane-header {
   display: flex;
