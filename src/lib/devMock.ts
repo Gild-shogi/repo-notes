@@ -54,6 +54,7 @@ export function installDevMock() {
     ["2026-07-02-viz.html", { raw: HTML_FIXTURE, kind: "html" }],
   ]);
   const pins = new Set<string>();
+  const repoPins = new Set<string>();
 
   const parseFrontmatter = (raw: string) => {
     const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
@@ -110,6 +111,7 @@ export function installDevMock() {
             canonicalUrl: "github.com/mock/repo",
             noteCount: notes.size,
             lastNoteAtMs: Date.now(),
+            pinned: repoPins.has(repoKey),
           },
         ];
       case "list_notes": {
@@ -133,6 +135,12 @@ export function installDevMock() {
         const fileName = args.fileName as string;
         if (args.pinned) pins.add(fileName);
         else pins.delete(fileName);
+        return null;
+      }
+      case "set_repo_pinned": {
+        const key = args.repoKey as string;
+        if (args.pinned) repoPins.add(key);
+        else repoPins.delete(key);
         return null;
       }
       case "read_note": {

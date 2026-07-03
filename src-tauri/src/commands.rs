@@ -22,6 +22,11 @@ pub fn set_pinned(repo_key: String, file_name: String, pinned: bool) -> Result<(
 }
 
 #[tauri::command]
+pub fn set_repo_pinned(repo_key: String, pinned: bool) -> Result<(), String> {
+    store::set_repo_pinned(&store::data_root(), &repo_key, pinned)
+}
+
+#[tauri::command]
 pub fn read_note(repo_key: String, file_name: String) -> Result<NoteContent, String> {
     store::read_note(&store::data_root(), &repo_key, &file_name)
 }

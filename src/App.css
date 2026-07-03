@@ -106,10 +106,12 @@ body {
   padding: 4px 8px 16px;
 }
 
+.repo-list li,
 .note-list li {
   position: relative;
 }
 
+.repo-list li > button:first-child,
 .note-list li > button:first-child {
   padding-right: 32px;
 }
@@ -129,6 +131,7 @@ body {
   transition: opacity 0.12s;
 }
 
+.repo-list li:hover .pin-btn,
 .note-list li:hover .pin-btn,
 .pin-btn.pinned {
   opacity: 1;
@@ -142,7 +145,7 @@ body {
   color: var(--accent);
 }
 
-.repo-list button,
+.repo-list li > button:first-child,
 .note-list li > button:first-child {
   display: flex;
   flex-direction: column;
@@ -158,12 +161,12 @@ body {
   cursor: pointer;
 }
 
-.repo-list button:hover,
+.repo-list li > button:first-child:hover,
 .note-list li > button:first-child:hover {
   background: rgba(0, 0, 0, 0.04);
 }
 
-.repo-list button.selected,
+.repo-list li > button:first-child.selected,
 .note-list li > button:first-child.selected {
   background: var(--accent-bg);
   color: var(--accent);

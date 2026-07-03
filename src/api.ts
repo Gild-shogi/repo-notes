@@ -11,6 +11,9 @@ export const listNotes = (repoKey: string, query?: string) =>
 export const setPinned = (repoKey: string, fileName: string, pinned: boolean) =>
   invoke<void>("set_pinned", { repoKey, fileName, pinned });
 
+export const setRepoPinned = (repoKey: string, pinned: boolean) =>
+  invoke<void>("set_repo_pinned", { repoKey, pinned });
+
 /** ノート内リンクのローカルパスをRust側の検証付きで開く */
 export const openLocalPath = (path: string) =>
   invoke<void>("open_local_path", { path });

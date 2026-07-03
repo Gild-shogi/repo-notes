@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { listRepos } from "../api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { listRepos, setRepoPinned } from "../api";
 import { formatDateTime } from "../lib/date";
+import { PinIcon } from "./icons";
 
 interface Props {
   selectedRepoKey: string | null;
@@ -8,9 +9,18 @@ interface Props {
 }
 
 export function RepoList({ selectedRepoKey, onSelect }: Props) {
+  const queryClient = useQueryClient();
   const { data: repos, isLoading } = useQuery({
     queryKey: ["repos"],
     queryFn: listRepos,
+  });
+
+  const pin = useMutation({
+    mutationFn: ({ repoKey, pinned }: { repoKey: string; pinned: boolean }) =>
+      setRepoPinned(repoKey, pinned),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["repos"] });
+    },
   });
 
   if (isLoading) return <div className="pane-status">読み込み中…</div>;
@@ -44,6 +54,17 @@ export function RepoList({ selectedRepoKey, onSelect }: Props) {
               {repo.lastNoteAtMs != null &&
                 ` · ${formatDateTime(repo.lastNoteAtMs)}`}
             </span>
+          </button>
+          <button
+            type="button"
+            className={`pin-btn ${repo.pinned ? "pinned" : ""}`}
+            title={repo.pinned ? "ピン留めを解除" : "ピン留め"}
+            disabled={pin.isPending}
+            onClick={() =>
+              pin.mutate({ repoKey: repo.repoKey, pinned: !repo.pinned })
+            }
+          >
+            <PinIcon filled={repo.pinned} />
           </button>
         </li>
       ))}

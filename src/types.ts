@@ -6,6 +6,7 @@ export interface RepoSummary {
   canonicalUrl: string | null;
   noteCount: number;
   lastNoteAtMs: number | null;
+  pinned: boolean;
 }
 
 export interface NoteSummary {

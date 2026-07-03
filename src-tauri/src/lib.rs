@@ -22,6 +22,7 @@ pub fn run() {
             commands::create_note,
             commands::delete_note,
             commands::set_pinned,
+            commands::set_repo_pinned,
             open_link::open_local_path,
         ])
         .run(tauri::generate_context!())

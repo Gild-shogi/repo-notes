@@ -44,6 +44,7 @@ pub struct RepoSummary {
     pub canonical_url: Option<String>,
     pub note_count: usize,
     pub last_note_at_ms: Option<i64>,
+    pub pinned: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]

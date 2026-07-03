@@ -78,6 +78,7 @@ pub fn list_repos(root: &Path) -> Vec<RepoSummary> {
     let Ok(entries) = fs::read_dir(&repos_dir) else {
         return Vec::new();
     };
+    let pins = load_repo_pins(root);
     let mut repos: Vec<RepoSummary> = entries
         .filter_map(|entry| {
             let entry = entry.ok()?;
@@ -88,6 +89,7 @@ pub fn list_repos(root: &Path) -> Vec<RepoSummary> {
             let notes = list_note_files(&entry.path().join("notes"));
             let last_note_at_ms = notes.iter().map(|p| mtime_ms(p)).max();
             Some(RepoSummary {
+                pinned: pins.contains(&meta.repo_key),
                 repo_key: meta.repo_key,
                 repo_name: meta.repo_name,
                 canonical_url: meta.canonical_url,
@@ -96,7 +98,12 @@ pub fn list_repos(root: &Path) -> Vec<RepoSummary> {
             })
         })
         .collect();
-    repos.sort_by(|a, b| b.last_note_at_ms.cmp(&a.last_note_at_ms));
+    // ピン留めを先頭に、あとは最終ノート日時の新しい順
+    repos.sort_by(|a, b| {
+        b.pinned
+            .cmp(&a.pinned)
+            .then_with(|| b.last_note_at_ms.cmp(&a.last_note_at_ms))
+    });
     repos
 }
 
@@ -171,12 +178,34 @@ fn pins_path(root: &Path, repo_key: &str) -> PathBuf {
     root.join("repos").join(repo_key).join("pins.json")
 }
 
-fn load_pins(root: &Path, repo_key: &str) -> std::collections::HashSet<String> {
-    fs::read_to_string(pins_path(root, repo_key))
+fn read_pins_file(path: &Path) -> std::collections::HashSet<String> {
+    fs::read_to_string(path)
         .ok()
         .and_then(|s| serde_json::from_str::<Pins>(&s).ok())
         .map(|p| p.pinned.into_iter().collect())
         .unwrap_or_default()
+}
+
+/// pins に entry を追加（pinned=true）または除去して保存する。
+fn write_pins_file(
+    path: &Path,
+    pins: std::collections::HashSet<String>,
+    entry: &str,
+    pinned: bool,
+) -> Result<(), String> {
+    let mut pins: Vec<String> = pins.into_iter().collect();
+    pins.retain(|e| e != entry);
+    if pinned {
+        pins.push(entry.to_string());
+    }
+    pins.sort();
+    let json = serde_json::to_string_pretty(&Pins { pinned: pins })
+        .map_err(|e| format!("ピン状態のシリアライズに失敗: {e}"))?;
+    fs::write(path, json).map_err(|e| format!("ピン状態の保存に失敗: {e}"))
+}
+
+fn load_pins(root: &Path, repo_key: &str) -> std::collections::HashSet<String> {
+    read_pins_file(&pins_path(root, repo_key))
 }
 
 pub fn set_pinned(
@@ -190,16 +219,29 @@ pub fn set_pinned(
     if pinned && !path.is_file() {
         return Err(format!("ノートが存在しません: {file_name}"));
     }
-    let mut pins: Vec<String> = load_pins(root, repo_key).into_iter().collect();
-    pins.retain(|f| f != file_name);
-    if pinned {
-        pins.push(file_name.to_string());
+    write_pins_file(
+        &pins_path(root, repo_key),
+        load_pins(root, repo_key),
+        file_name,
+        pinned,
+    )
+}
+
+/// アプリが管理するリポジトリのピン留め状態（<root>/pinned-repos.json）。
+fn repo_pins_path(root: &Path) -> PathBuf {
+    root.join("pinned-repos.json")
+}
+
+fn load_repo_pins(root: &Path) -> std::collections::HashSet<String> {
+    read_pins_file(&repo_pins_path(root))
+}
+
+pub fn set_repo_pinned(root: &Path, repo_key: &str, pinned: bool) -> Result<(), String> {
+    validate_segment(repo_key)?;
+    if pinned && !root.join("repos").join(repo_key).join("meta.json").is_file() {
+        return Err(format!("リポジトリが存在しません: {repo_key}"));
     }
-    pins.sort();
-    let json = serde_json::to_string_pretty(&Pins { pinned: pins })
-        .map_err(|e| format!("ピン状態のシリアライズに失敗: {e}"))?;
-    fs::write(pins_path(root, repo_key), json)
-        .map_err(|e| format!("ピン状態の保存に失敗: {e}"))
+    write_pins_file(&repo_pins_path(root), load_repo_pins(root), repo_key, pinned)
 }
 
 /// メタデータとタイトル（フォールバック解決済み）を返す。
@@ -517,6 +559,44 @@ mod tests {
 
         // 存在しないノートはピン留め不可
         assert!(set_pinned(tmp.path(), key, "missing.md", true).is_err());
+    }
+
+    #[test]
+    fn repo_pin_sorts_first_and_survives_reload() {
+        let tmp = tempfile::tempdir().unwrap();
+        setup_repo(tmp.path(), "with-note--11111111");
+        setup_repo(tmp.path(), "no-note--22222222");
+        fs::write(
+            tmp.path()
+                .join("repos")
+                .join("with-note--11111111")
+                .join("notes")
+                .join("2026-07-01-a.md"),
+            "a\n",
+        )
+        .unwrap();
+
+        // ピンなしではノートがあるリポジトリ（last_note_at_ms あり）が先頭
+        let repos = list_repos(tmp.path());
+        assert_eq!(repos[0].repo_key, "with-note--11111111");
+        assert!(repos.iter().all(|r| !r.pinned));
+
+        // ピン留めすると末尾のリポジトリが先頭に来る
+        set_repo_pinned(tmp.path(), "no-note--22222222", true).unwrap();
+        let repos = list_repos(tmp.path());
+        assert_eq!(repos[0].repo_key, "no-note--22222222");
+        assert!(repos[0].pinned);
+        assert!(!repos[1].pinned);
+
+        // 解除で通常の並びに戻る
+        set_repo_pinned(tmp.path(), "no-note--22222222", false).unwrap();
+        let repos = list_repos(tmp.path());
+        assert_eq!(repos[0].repo_key, "with-note--11111111");
+
+        // 存在しないリポジトリはピン留め不可
+        assert!(set_repo_pinned(tmp.path(), "missing--00000000", true).is_err());
+        // パストラバーサルも拒否
+        assert!(set_repo_pinned(tmp.path(), "../etc", true).is_err());
     }
 
     #[test]
