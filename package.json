@@ -13,7 +13,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:skill": "bash tests/skill/test-resolve-note-dir.sh",
+    "test:skill": "bash tests/skill/test-resolve-note-dir.sh && bash tests/skill/test-session-start-notes.sh",
     "tauri": "tauri"
   },
   "dependencies": {

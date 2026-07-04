@@ -29,4 +29,5 @@ install-skill:
 test:
 	cargo test --manifest-path src-tauri/Cargo.toml
 	bash tests/skill/test-resolve-note-dir.sh
+	bash tests/skill/test-session-start-notes.sh
 	pnpm test
