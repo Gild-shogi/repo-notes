@@ -6,8 +6,10 @@
 #   標準出力: notesディレクトリの絶対パス1行（--json 時はJSONオブジェクト）
 #   exit 2: Gitリポジトリではない
 #
-# 副作用: repos/<key>/notes/assets の mkdir -p、meta.json の初回作成のみ。
+# 副作用: repos/<key>/notes/assets の mkdir -p、meta.json の初回作成、
+#         および origin 追加前のローカルキーから origin キーへのメモ移行。
 # --probe 指定時は副作用なしでパス解決のみ行う（読み取り用途）。
+#         未移行のレガシーキーがある場合はそのディレクトリを返す。
 # repo-key 導出仕様は README.md を参照。このスクリプトが唯一の実装。
 set -euo pipefail
 
@@ -75,31 +77,36 @@ normalize_url() {
   printf '%s' "$url" | lower
 }
 
-# canonical form の決定
+# canonical form の決定（local: 形式は origin 追加前のレガシーキー検出にも使うため常に算出する）
+common_dir="$(git -C "$repo_path" rev-parse --git-common-dir)"
+if [[ "$common_dir" != /* ]]; then
+  common_dir="$repo_path/$common_dir"
+fi
+common_dir="$(cd "$common_dir" && pwd -P)"
+local_canonical="local:$common_dir"
+
 remote_url="$(git -C "$repo_path" remote get-url origin 2>/dev/null || true)"
 if [[ -n "$remote_url" ]]; then
   canonical="$(normalize_url "$remote_url")"
 else
-  common_dir="$(git -C "$repo_path" rev-parse --git-common-dir)"
-  if [[ "$common_dir" != /* ]]; then
-    common_dir="$repo_path/$common_dir"
-  fi
-  common_dir="$(cd "$common_dir" && pwd -P)"
-  canonical="local:$common_dir"
+  canonical="$local_canonical"
 fi
 
 # slug（可読性用・一意性はhashで担保）
 kebab() { lower | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' | cut -c1-50; }
-if [[ "$canonical" == local:* ]]; then
-  repo_dir="${canonical#local:}"
-  repo_dir="${repo_dir%/.git}"
-  repo_name="$(basename "$repo_dir" .git)"
-  slug="$(printf '%s' "$repo_name" | kebab)"
+local_repo_dir="${local_canonical#local:}"
+local_repo_dir="${local_repo_dir%/.git}"
+local_slug="$(basename "$local_repo_dir" .git | kebab)"
+[[ -n "$local_slug" ]] || local_slug="repo"
+
+if [[ "$canonical" == "$local_canonical" ]]; then
+  repo_name="$(basename "$local_repo_dir" .git)"
+  slug="$local_slug"
 else
   repo_name="$(basename "$canonical")"
   slug="$(printf '%s' "$canonical" | awk -F/ '{ n=NF; if (n>=2) printf "%s/%s", $(n-1), $n; else print $n }' | kebab)"
+  [[ -n "$slug" ]] || slug="repo"
 fi
-[[ -n "$slug" ]] || slug="repo"
 
 hash_of() { printf '%s' "$1" | shasum -a 256 | cut -c1-"$2"; }
 
@@ -133,8 +140,39 @@ if [[ -f "$meta_file" ]]; then
   fi
 fi
 
+# origin 追加前にローカルフォールバックキーで作られたメモの検出
+# （レガシーは hash8 キーのみ対象。local: の hash12 伸長は実運用では起きない前提）
+legacy_dir=""
+if [[ "$canonical" != "$local_canonical" ]]; then
+  legacy_key="${local_slug}--$(hash_of "$local_canonical" 8)"
+  legacy_meta="$root/repos/$legacy_key/meta.json"
+  if [[ "$legacy_key" != "$key" && -f "$legacy_meta" && "$(meta_canonical_url "$legacy_meta")" == "$local_canonical" ]]; then
+    legacy_dir="$root/repos/$legacy_key"
+  fi
+fi
+
 notes_dir="$root/repos/$key/notes"
 assets_dir="$notes_dir/assets"
+
+if [[ -n "$legacy_dir" ]]; then
+  if [[ -f "$meta_file" || -d "$notes_dir" ]]; then
+    # 新旧両方に実体がある場合は自動では触らない（手動マージが必要）
+    echo "warning: 旧キーのメモが残っています: ${legacy_dir}（移行先 $root/repos/$key は既に存在）" >&2
+  elif $probe; then
+    # 副作用なしで読めるよう、移行前はレガシー側を返す
+    notes_dir="$legacy_dir/notes"
+    assets_dir="$notes_dir/assets"
+  else
+    # メモ・pins.json ごと新キーへ移行し、meta.json は新キーの内容で作り直す
+    mv "$legacy_dir" "$root/repos/$key"
+    rm -f "$meta_file"
+    repo_pins="$root/pinned-repos.json"
+    if [[ -f "$repo_pins" ]]; then
+      sed -i '' "s|\"$legacy_key\"|\"$key\"|g" "$repo_pins" 2>/dev/null || true
+    fi
+  fi
+fi
+
 $probe || mkdir -p "$assets_dir"
 
 created=false

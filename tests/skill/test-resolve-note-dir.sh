@@ -127,6 +127,68 @@ else
 fi
 assert_eq "--probeと通常実行が同一パスに解決される" "$("$resolve" "$base/probe-only")" "$probe_dir"
 
+# --- 9. origin追加後にレガシーローカルキーのメモが新キーへ移行される ---
+make_repo "$base/legacy"
+old_notes="$(resolve_dir "$base/legacy")"
+old_repo_dir="$(dirname "$old_notes")"
+old_key="$(basename "$old_repo_dir")"
+echo "本文" > "$old_notes/2026-07-01-x.md"
+printf '{\n  "pinned": ["2026-07-01-x.md"]\n}\n' > "$old_repo_dir/pins.json"
+printf '{\n  "pinned": ["%s"]\n}\n' "$old_key" > "$REPO_NOTES_DIR/pinned-repos.json"
+git -C "$base/legacy" remote add origin "https://github.com/legacy/repo.git"
+
+probe_before="$("$resolve" --probe "$base/legacy")"
+assert_eq "移行前の--probeはレガシー側を返す" "$old_notes" "$probe_before"
+tests=$((tests + 1))
+if [[ -d "$old_repo_dir" ]]; then
+  echo "ok: --probeは移行しない"
+else
+  echo "FAIL: --probeが移行してしまった"
+  failures=$((failures + 1))
+fi
+
+new_notes="$(resolve_dir "$base/legacy")"
+new_repo_dir="$(dirname "$new_notes")"
+new_key="$(basename "$new_repo_dir")"
+assert_ne "originキーへ移行される" "$old_notes" "$new_notes"
+tests=$((tests + 1))
+if [[ -f "$new_notes/2026-07-01-x.md" && ! -e "$old_repo_dir" ]]; then
+  echo "ok: メモが新キーへ移動し旧ディレクトリが消える"
+else
+  echo "FAIL: メモの移動に失敗"
+  failures=$((failures + 1))
+fi
+tests=$((tests + 1))
+if grep -q '"canonicalUrl": "github.com/legacy/repo"' "$new_repo_dir/meta.json"; then
+  echo "ok: meta.jsonが新キーの内容で再生成される"
+else
+  echo "FAIL: meta.jsonの再生成に失敗"
+  cat "$new_repo_dir/meta.json"
+  failures=$((failures + 1))
+fi
+tests=$((tests + 1))
+if grep -q '2026-07-01-x.md' "$new_repo_dir/pins.json" && grep -q "\"$new_key\"" "$REPO_NOTES_DIR/pinned-repos.json"; then
+  echo "ok: ノートピンとリポジトリピンが引き継がれる"
+else
+  echo "FAIL: ピンの引き継ぎに失敗"
+  failures=$((failures + 1))
+fi
+assert_eq "移行後の--probeは新キーを返す" "$new_notes" "$("$resolve" --probe "$base/legacy")"
+
+# --- 10. 新旧両方に実体がある場合は移行しない ---
+mkdir -p "$old_repo_dir/notes"
+local_canonical="local:$(cd "$base/legacy/.git" && pwd -P)"
+printf '{\n  "repoKey": "%s",\n  "canonicalUrl": "%s"\n}\n' "$old_key" "$local_canonical" > "$old_repo_dir/meta.json"
+echo "旧側" > "$old_repo_dir/notes/2026-07-02-y.md"
+both_notes="$(resolve_dir "$base/legacy" 2>/dev/null)"
+tests=$((tests + 1))
+if [[ "$both_notes" == "$new_notes" && -f "$old_repo_dir/notes/2026-07-02-y.md" ]]; then
+  echo "ok: 新旧両方が存在する場合は触らず新キーを返す"
+else
+  echo "FAIL: 両存在時の挙動が不正: $both_notes"
+  failures=$((failures + 1))
+fi
+
 echo
 echo "$tests tests, $failures failures"
 [[ "$failures" -eq 0 ]]
