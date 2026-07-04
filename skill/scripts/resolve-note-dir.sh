@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
 # repo-notes: Gitリポジトリからメモ書き込み先ディレクトリを解決する。
 #
-# usage: resolve-note-dir.sh [--json] [repo-path]
+# usage: resolve-note-dir.sh [--json] [--probe] [repo-path]
 #   repo-path 省略時はカレントディレクトリ。
 #   標準出力: notesディレクトリの絶対パス1行（--json 時はJSONオブジェクト）
 #   exit 2: Gitリポジトリではない
 #
 # 副作用: repos/<key>/notes/assets の mkdir -p、meta.json の初回作成のみ。
+# --probe 指定時は副作用なしでパス解決のみ行う（読み取り用途）。
 # repo-key 導出仕様は README.md を参照。このスクリプトが唯一の実装。
 set -euo pipefail
 
 json_output=false
+probe=false
 repo_path=""
 for arg in "$@"; do
   case "$arg" in
     --json) json_output=true ;;
+    --probe) probe=true ;;
     -h|--help)
       sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
@@ -132,10 +135,10 @@ fi
 
 notes_dir="$root/repos/$key/notes"
 assets_dir="$notes_dir/assets"
-mkdir -p "$assets_dir"
+$probe || mkdir -p "$assets_dir"
 
 created=false
-if [[ ! -f "$meta_file" ]]; then
+if ! $probe && [[ ! -f "$meta_file" ]]; then
   created=true
   now="$(date '+%Y-%m-%dT%H:%M:%S%z' | sed 's/\([0-9][0-9]\)$/:\1/')"
   esc_name="$(printf '%s' "$repo_name" | json_escape)"

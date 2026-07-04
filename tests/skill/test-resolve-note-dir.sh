@@ -115,6 +115,18 @@ else
   failures=$((failures + 1))
 fi
 
+# --- 8. --probe は副作用なしで同一パスに解決される ---
+make_repo "$base/probe-only" "https://github.com/probe/target"
+probe_dir="$("$resolve" --probe "$base/probe-only")"
+tests=$((tests + 1))
+if [[ ! -e "$probe_dir" && ! -e "$(dirname "$probe_dir")/meta.json" ]]; then
+  echo "ok: --probeはディレクトリもmeta.jsonも作らない"
+else
+  echo "FAIL: --probeが副作用を起こした: $probe_dir"
+  failures=$((failures + 1))
+fi
+assert_eq "--probeと通常実行が同一パスに解決される" "$("$resolve" "$base/probe-only")" "$probe_dir"
+
 echo
 echo "$tests tests, $failures failures"
 [[ "$failures" -eq 0 ]]
