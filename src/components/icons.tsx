@@ -108,6 +108,66 @@ export function PinIcon({ filled = false }: { filled?: boolean }) {
   );
 }
 
+export function CopyIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect
+        x="8.5"
+        y="8.5"
+        width="11"
+        height="11"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M15.5 5.5v-1A1.5 1.5 0 0 0 14 3H5.5A1.5 1.5 0 0 0 4 4.5V13a1.5 1.5 0 0 0 1.5 1.5h1"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** ターミナルプロンプト（Claude向けコピー用） */
+export function PromptIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect
+        x="3"
+        y="4.5"
+        width="18"
+        height="15"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function CheckIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 12.5l5 5L19.5 7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function NoteIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">

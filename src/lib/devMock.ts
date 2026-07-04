@@ -192,6 +192,10 @@ export function installDevMock() {
           console.log("[devMock] opener:", args);
           return null;
         }
+        if (cmd === "plugin:clipboard-manager|write_text") {
+          console.log("[devMock] clipboard write_text:", args);
+          return navigator.clipboard.writeText(String(args.text ?? ""));
+        }
         throw new Error(`unknown command: ${cmd}`);
     }
   };

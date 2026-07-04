@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { deleteNote, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
 import { extractToc } from "../lib/toc";
-import { EditIcon, EyeIcon, FolderIcon, OpenExternalIcon, TrashIcon } from "./icons";
+import {
+  CheckIcon,
+  CopyIcon,
+  EditIcon,
+  EyeIcon,
+  FolderIcon,
+  OpenExternalIcon,
+  PromptIcon,
+  TrashIcon,
+} from "./icons";
 import { MarkdownView } from "./MarkdownView";
 import { NoteEditor } from "./NoteEditor";
 import { Toc } from "./Toc";
@@ -27,7 +37,18 @@ export function NoteView({
 }: Props) {
   const [editing, setEditing] = useState(startInEdit);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [copied, setCopied] = useState<"path" | "prompt" | null>(null);
+  const copiedTimer = useRef<number | undefined>(undefined);
   const queryClient = useQueryClient();
+
+  useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
+
+  const copyToClipboard = async (kind: "path" | "prompt", text: string) => {
+    await writeText(text);
+    setCopied(kind);
+    window.clearTimeout(copiedTimer.current);
+    copiedTimer.current = window.setTimeout(() => setCopied(null), 1500);
+  };
 
   const { data: note, isLoading, error } = useQuery({
     queryKey: ["note", repoKey, fileName],
@@ -61,6 +82,29 @@ export function NoteView({
         <div className="note-header-row">
           <h1>{note.meta.title}</h1>
           <div className="note-actions">
+            <button
+              type="button"
+              className="icon-action"
+              title={copied === "path" ? "コピーしました" : "パスをコピー"}
+              aria-label="パスをコピー"
+              onClick={() => copyToClipboard("path", note.absPath)}
+            >
+              {copied === "path" ? <CheckIcon /> : <CopyIcon />}
+            </button>
+            <button
+              type="button"
+              className="icon-action"
+              title={copied === "prompt" ? "コピーしました" : "Claude用にコピー"}
+              aria-label="Claude用にコピー"
+              onClick={() =>
+                copyToClipboard(
+                  "prompt",
+                  `repo-notes のメモ「${note.meta.title ?? note.fileName}」(${note.absPath}) を読んでから、その内容を踏まえて作業を進めてください。`,
+                )
+              }
+            >
+              {copied === "prompt" ? <CheckIcon /> : <PromptIcon />}
+            </button>
             <button
               type="button"
               className="icon-action"
