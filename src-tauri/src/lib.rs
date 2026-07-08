@@ -24,6 +24,7 @@ pub fn run() {
             commands::delete_note,
             commands::set_pinned,
             commands::set_repo_pinned,
+            commands::print_view,
             open_link::open_local_path,
         ])
         .run(tauri::generate_context!())

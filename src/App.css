@@ -652,6 +652,56 @@ body {
 
 /* mermaidブロックを含むpreの装飾はPreコンポーネント側で外している */
 
+/* 印刷（ノート本文のみを出力する） */
+@media print {
+  body {
+    overflow: visible;
+  }
+
+  .layout {
+    display: block;
+    height: auto;
+  }
+
+  /* スクロールコンテナのままだと1ページ目しか印刷されない */
+  .pane {
+    overflow: visible;
+    height: auto;
+  }
+
+  .pane-repos,
+  .pane-notes,
+  .note-actions,
+  .toc,
+  .back-to-top {
+    display: none !important;
+  }
+
+  .note-view {
+    padding: 0;
+    max-width: none;
+  }
+
+  .markdown-body pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: visible;
+  }
+
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3 {
+    break-after: avoid;
+  }
+
+  .markdown-body pre,
+  .markdown-body table,
+  .markdown-body img,
+  .mermaid-block {
+    break-inside: avoid;
+  }
+}
+
 /* HTMLノート */
 .note-view--html {
   max-width: none;

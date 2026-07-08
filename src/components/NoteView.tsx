@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
-import { deleteNote, readNote } from "../api";
+import { deleteNote, printView, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
 import { extractToc } from "../lib/toc";
 import {
@@ -13,6 +13,7 @@ import {
   EyeIcon,
   FolderIcon,
   OpenExternalIcon,
+  PrintIcon,
   PromptIcon,
   TrashIcon,
 } from "./icons";
@@ -123,6 +124,17 @@ export function NoteView({
             >
               <FolderIcon />
             </button>
+            {note.kind === "md" && !editing && (
+              <button
+                type="button"
+                className="icon-action"
+                title="印刷 / PDF保存"
+                aria-label="印刷 / PDF保存"
+                onClick={() => printView()}
+              >
+                <PrintIcon />
+              </button>
+            )}
             {note.kind === "md" && (
               <button
                 type="button"

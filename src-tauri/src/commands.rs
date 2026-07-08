@@ -45,3 +45,9 @@ pub fn create_note(repo_key: String, title: String) -> Result<String, String> {
 pub fn delete_note(repo_key: String, file_name: String) -> Result<(), String> {
     store::delete_note(&store::data_root(), &repo_key, &file_name)
 }
+
+/// OSネイティブの印刷ダイアログを開く（macOSでは「PDFとして保存」も可能）
+#[tauri::command]
+pub fn print_view(webview_window: tauri::WebviewWindow) -> Result<(), String> {
+    webview_window.print().map_err(|e| e.to_string())
+}

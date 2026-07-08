@@ -29,3 +29,6 @@ export const createNote = (repoKey: string, title: string) =>
 
 export const deleteNote = (repoKey: string, fileName: string) =>
   invoke<void>("delete_note", { repoKey, fileName });
+
+/** ネイティブ印刷ダイアログを開く（PDF保存もここから可能） */
+export const printView = () => invoke<void>("print_view");

@@ -186,6 +186,9 @@ export function installDevMock() {
       case "open_local_path":
         console.log("[devMock] open_local_path:", args);
         return null;
+      case "print_view":
+        window.print();
+        return null;
       default:
         if (cmd.startsWith("plugin:event|")) return 0;
         if (cmd.startsWith("plugin:opener|")) {
