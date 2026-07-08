@@ -56,6 +56,14 @@ export function NoteView({
     queryFn: () => readNote(repoKey, fileName),
   });
 
+  // 印刷/PDF保存時のデフォルトファイル名になるため、表示中ノートのタイトルを反映する
+  useEffect(() => {
+    if (note) document.title = note.meta.title ?? note.fileName;
+    return () => {
+      document.title = "repo-notes";
+    };
+  }, [note]);
+
   const remove = useMutation({
     mutationFn: () => deleteNote(repoKey, fileName),
     onSuccess: () => {

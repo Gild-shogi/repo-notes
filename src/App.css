@@ -677,8 +677,9 @@ body {
     display: none !important;
   }
 
+  /* WKWebViewの印刷は用紙余白がほぼ付かないため、CSS側で余白を確保する */
   .note-view {
-    padding: 0;
+    padding: 12mm 14mm;
     max-width: none;
   }
 
