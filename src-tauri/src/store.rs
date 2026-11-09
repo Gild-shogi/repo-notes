@@ -537,6 +537,90 @@ mod tests {
         assert_eq!(fs::read_to_string(&secret).unwrap(), "outside data");
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn asset_directory_symlink_cannot_delete_outside_storage() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let notes = tmp.path().join("repos").join(key).join("notes");
+        fs::write(notes.join("a.md"), "note").unwrap();
+        fs::create_dir(outside.path().join("a")).unwrap();
+        fs::write(outside.path().join("a/image.png"), "keep").unwrap();
+        std::os::unix::fs::symlink(outside.path(), notes.join("assets")).unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+        assert!(delete_note(&root, key, "a.md").is_err());
+        assert_eq!(
+            fs::read_to_string(outside.path().join("a/image.png")).unwrap(),
+            "keep"
+        );
+        assert_eq!(read_note(&root, key, "a.md").unwrap().raw, "note");
+    }
+
+    #[test]
+    fn damaged_pins_are_reported_and_preserved() {
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let repo = tmp.path().join("repos").join(key);
+        fs::write(repo.join("notes/a.md"), "note").unwrap();
+        fs::write(repo.join("pins.json"), "invalid json").unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+        assert!(list_notes(&root, key, None).is_err());
+        assert!(set_pinned(&root, key, "a.md", true).is_err());
+        assert_eq!(
+            fs::read_to_string(repo.join("pins.json")).unwrap(),
+            "invalid json"
+        );
+    }
+
+    #[test]
+    fn missing_repos_are_empty_but_invalid_storage_is_an_error() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+        assert!(list_repos(&root).unwrap().is_empty());
+        fs::write(tmp.path().join("repos"), "not a directory").unwrap();
+        assert!(list_repos(&root).is_err());
+        assert!(DataRoot::open(&tmp.path().join("repos")).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn opened_root_survives_alias_replacement_and_accepts_internal_relative_links() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        let storage = tmp.path().join("storage");
+        setup_repo(&storage, key);
+        let notes = storage.join("repos").join(key).join("notes");
+        fs::write(notes.join("actual.md"), "original").unwrap();
+        std::os::unix::fs::symlink("actual.md", notes.join("alias.md")).unwrap();
+        let alias = tmp.path().join("alias");
+        std::os::unix::fs::symlink(&storage, &alias).unwrap();
+        let root = DataRoot::open(&alias).unwrap();
+        fs::remove_file(&alias).unwrap();
+        std::os::unix::fs::symlink(outside.path(), &alias).unwrap();
+        assert_eq!(read_note(&root, key, "alias.md").unwrap().raw, "original");
+        write_note(&root, key, "alias.md", "updated").unwrap();
+        assert_eq!(read_note(&root, key, "actual.md").unwrap().raw, "updated");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn intermediate_symlink_with_trailing_slash_cannot_escape_storage() {
+        let tmp = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("private.md"), "private").unwrap();
+        std::os::unix::fs::symlink(
+            format!("{}/", outside.path().display()),
+            tmp.path().join("linked"),
+        )
+        .unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+        assert!(root.read(Path::new("linked/private.md")).is_err());
+    }
+
     #[test]
     fn crud_roundtrip() {
         let tmp = tempfile::tempdir().unwrap();

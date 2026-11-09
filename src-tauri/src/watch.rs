@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use notify::RecursiveMode;
@@ -10,13 +10,8 @@ pub const CHANGED_EVENT: &str = "repo-notes://changed";
 
 /// データルートを監視し、変更があったリポジトリのキーをフロントへ通知する。
 /// データルートが未作成の場合は作成されるまで待ってから監視を開始する。
-pub fn spawn(app: AppHandle) {
+pub fn spawn(app: AppHandle, root: PathBuf) {
     std::thread::spawn(move || {
-        let root = crate::store::data_root();
-        while !root.exists() {
-            std::thread::sleep(Duration::from_secs(3));
-        }
-
         let (tx, rx) = std::sync::mpsc::channel();
         let mut debouncer = match new_debouncer(Duration::from_millis(300), None, tx) {
             Ok(d) => d,
