@@ -3,6 +3,11 @@ use tauri::http::{Request, Response, StatusCode};
 
 use crate::store::DataRoot;
 
+const NOTE_CONTENT_SECURITY_POLICY: &str = concat!(
+    "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; ",
+    "img-src data:; base-uri 'none'; form-action 'none'; sandbox allow-scripts"
+);
+
 pub fn response(root: &DataRoot, request: Request<Vec<u8>>) -> Response<Vec<u8>> {
     let loaded = (|| {
         let encoded = request
@@ -29,6 +34,7 @@ pub fn response(root: &DataRoot, request: Request<Vec<u8>>) -> Response<Vec<u8>>
         Ok((bytes, mime)) => Response::builder()
             .header("Content-Type", mime)
             .header("X-Content-Type-Options", "nosniff")
+            .header("Content-Security-Policy", NOTE_CONTENT_SECURITY_POLICY)
             .body(bytes)
             .unwrap(),
         Err(status) => Response::builder().status(status).body(Vec::new()).unwrap(),
@@ -49,6 +55,21 @@ mod tests {
             .uri(format!("asset://localhost/{encoded}"))
             .body(Vec::new())
             .unwrap()
+    }
+
+    #[test]
+    fn html_is_served_with_an_app_owned_policy_even_when_the_note_contains_a_relaxed_policy() {
+        let tmp = tempfile::tempdir().unwrap();
+        let html = b"<!doctype html><meta http-equiv=Content-Security-Policy content=\"default-src * 'unsafe-inline'\"><script>document.title='ready'</script>";
+        fs::write(tmp.path().join("note.html"), html).unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+
+        let served = response(&root, request(&root.path().join("note.html")));
+
+        assert_eq!(served.status(), 200);
+        assert_eq!(served.headers()["Content-Type"], "text/html");
+        assert!(served.headers().contains_key("Content-Security-Policy"));
+        assert_eq!(served.body(), html);
     }
 
     #[cfg(unix)]
