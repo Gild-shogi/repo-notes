@@ -4,8 +4,8 @@ use tauri::http::{Request, Response, StatusCode};
 use crate::store::DataRoot;
 
 const NOTE_CONTENT_SECURITY_POLICY: &str = concat!(
-    "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; ",
-    "img-src data:; base-uri 'none'; form-action 'none'; sandbox allow-scripts"
+    "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; ",
+    "img-src data:; base-uri 'none'; form-action 'none'; sandbox"
 );
 
 pub fn response(root: &DataRoot, request: Request<Vec<u8>>) -> Response<Vec<u8>> {
@@ -58,7 +58,7 @@ mod tests {
     }
 
     #[test]
-    fn html_is_served_with_an_app_owned_policy_even_when_the_note_contains_a_relaxed_policy() {
+    fn html_policy_is_delivered_as_a_header_even_when_the_note_contains_scripts() {
         let tmp = tempfile::tempdir().unwrap();
         let html = b"<!doctype html><meta http-equiv=Content-Security-Policy content=\"default-src * 'unsafe-inline'\"><script>document.title='ready'</script>";
         fs::write(tmp.path().join("note.html"), html).unwrap();

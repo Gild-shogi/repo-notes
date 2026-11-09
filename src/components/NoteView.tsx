@@ -224,12 +224,10 @@ export function NoteView({
           </>
         )
       ) : (
-        // allow-same-origin を付けないことで opaque origin となり、
-        // ノート内JSから親DOM・Tauri IPCへは到達できない
         <iframe
           className="html-note-frame"
           src={convertFileSrc(note.absPath)}
-          sandbox="allow-scripts"
+          sandbox=""
           title={note.meta.title ?? note.fileName}
         />
       )}

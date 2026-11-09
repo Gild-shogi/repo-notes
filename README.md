@@ -65,7 +65,7 @@ agent: claude-code                  # 任意
 <!-- repo-notes-meta {"title":"依存グラフ","created":"2026-07-02T10:00:00+09:00","tags":["viz"]} -->
 ```
 
-先頭 2KB 以内に無い場合は `<title>` → ファイル名にフォールバック。HTML ノートは**単一ファイル自己完結**（CDN・外部通信禁止）とし、sandbox 付き iframe でレンダリングされる。
+先頭 2KB 以内に無い場合は `<title>` → ファイル名にフォールバック。HTML ノートは**単一ファイル自己完結の静的 HTML** として、インライン CSS と data 画像を利用できる。アプリが配信時に文書用 CSP を強制し、権限を付与しない sandbox 付き iframe で表示する。JavaScript はインライン・外部とも実行せず、外部リソースの読み込みと通信を禁止する。既存の JavaScript に依存するグラフやフィルタ UI は動作しない。Markdown の Mermaid は引き続き利用できる。
 
 ## 開発
 
