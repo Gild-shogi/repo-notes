@@ -4,7 +4,8 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { keymap, EditorView } from "@codemirror/view";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { writeNote } from "../api";
+import { readNote, writeNote } from "../api";
+import type { SaveError, SaveOutcome } from "../types";
 import { editorExtensions } from "../lib/editorTheme";
 
 interface Props {
@@ -15,23 +16,34 @@ interface Props {
 
 export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
   const [content, setContent] = useState(initialContent);
-  const [dirty, setDirty] = useState(false);
+  const [savedContent, setSavedContent] = useState(initialContent);
+  const dirty = content !== savedContent;
   const queryClient = useQueryClient();
 
-  const save = useMutation({
-    mutationFn: (value: string) => writeNote(repoKey, fileName, value),
-    onSuccess: () => {
-      setDirty(false);
+  const save = useMutation<SaveOutcome, SaveError, { content: string; expectedRaw: string }>({
+    mutationFn: (input) => writeNote(repoKey, fileName, input.content, input.expectedRaw),
+    onSuccess: (_, input) => {
+      setSavedContent(input.content);
       queryClient.invalidateQueries({ queryKey: ["note", repoKey, fileName] });
       queryClient.invalidateQueries({ queryKey: ["notes", repoKey] });
       queryClient.invalidateQueries({ queryKey: ["repos"] });
     },
   });
 
+  const reload = useMutation({
+    mutationFn: () => readNote(repoKey, fileName),
+    onSuccess: (note) => {
+      setContent(note.raw);
+      setSavedContent(note.raw);
+      save.reset();
+    },
+  });
+  const conflict = save.error?.kind === "conflict";
+
   const { isPending, mutate } = save;
   const saveContent = useCallback((value: string) => {
-    if (!isPending) mutate(value);
-  }, [isPending, mutate]);
+    if (!isPending && !reload.isPending && !conflict) mutate({ content: value, expectedRaw: savedContent });
+  }, [isPending, mutate, reload.isPending, conflict, savedContent]);
 
   const extensions = useMemo(
     () => [
@@ -63,13 +75,22 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
         </span>
         {save.isError && (
           <span className="editor-status error">
-            保存に失敗しました: {String(save.error)}
+            {conflict
+              ? "別の書き込みで更新されています。保存を拒否し、下書きを保持しました。必要な内容を控えてから最新を読み込んでください。"
+              : `保存に失敗しました: ${save.error?.kind === "failure" ? save.error.message : String(save.error)}`}
           </span>
+        )}
+        {save.data?.cleanupWarnings.map((warning) => <span className="editor-status error" key={warning}>{warning}</span>)}
+        {reload.isError && <span className="editor-status error">再読込に失敗しました。下書きは保持しています: {String(reload.error)}</span>}
+        {conflict && (
+          <button type="button" className="btn" disabled={reload.isPending} onClick={() => {
+            if (window.confirm("編集中の下書きを破棄し、ファイルの最新内容を読み込みますか？")) reload.mutate();
+          }}>下書きを破棄して最新を読込</button>
         )}
         <button
           type="button"
           className="btn primary"
-          disabled={!dirty || save.isPending}
+          disabled={!dirty || save.isPending || reload.isPending || conflict}
           onClick={() => saveContent(content)}
         >
           保存 (⌘S)
@@ -77,10 +98,10 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
       </div>
       <CodeMirror
         value={content}
+        editable={!reload.isPending}
         extensions={extensions}
         onChange={(value) => {
           setContent(value);
-          setDirty(true);
         }}
         onBlur={() => {
           if (dirty) saveContent(content);

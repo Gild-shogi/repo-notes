@@ -164,9 +164,9 @@ export function installDevMock() {
       }
       case "write_note": {
         const fileName = args.fileName as string;
-        if (!notes.has(fileName)) throw new Error(`ノートが存在しません: ${fileName}`);
+        if (notes.get(fileName)?.raw !== args.expectedRaw) throw { kind: "conflict" };
         notes.set(fileName, { raw: args.content as string, kind: "md" });
-        return null;
+        return { cleanupWarnings: [] };
       }
       case "create_note": {
         const title = (args.title as string).trim();

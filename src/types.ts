@@ -4,6 +4,12 @@ export interface DeleteOutcome {
   cleanupWarnings: string[];
 }
 
+export interface SaveOutcome {
+  cleanupWarnings: string[];
+}
+
+export type SaveError = { kind: "conflict" } | { kind: "failure"; message: string };
+
 export interface RepoSummary {
   repoKey: string;
   repoName: string;
