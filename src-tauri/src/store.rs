@@ -476,6 +476,7 @@ pub fn delete_note(root: &DataRoot, repo_key: &str, file_name: &str) -> Result<(
     if !root.dir.metadata(&path).map_err(storage_error)?.is_file() {
         return Err(format!("ノートが存在しません: {file_name}"));
     }
+    let pins = load_pins(root, repo_key)?;
     // ノート専用のアセットディレクトリがあれば一緒に削除
     let assets = path
         .parent()
@@ -490,7 +491,6 @@ pub fn delete_note(root: &DataRoot, repo_key: &str, file_name: &str) -> Result<(
             Err(e) => return Err(storage_error(e)),
         }
     }
-    let pins = load_pins(root, repo_key)?;
     root.dir.remove_file(&path).map_err(storage_error)?;
     write_pins_file(root, &pins_path(repo_key), pins, file_name, false)?;
     Ok(())
@@ -592,6 +592,28 @@ mod tests {
         assert_eq!(
             fs::read_to_string(repo.join("pins.json")).unwrap(),
             "invalid json"
+        );
+    }
+
+    #[test]
+    fn deletion_rejected_by_damaged_pins_preserves_note_and_assets() {
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let repo = tmp.path().join("repos").join(key);
+        let assets = repo.join("notes/assets/a");
+        fs::create_dir_all(&assets).unwrap();
+        fs::write(repo.join("notes/a.md"), "note").unwrap();
+        fs::write(assets.join("image.png"), "image data").unwrap();
+        fs::write(repo.join("pins.json"), "invalid json").unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+
+        assert!(delete_note(&root, key, "a.md").is_err());
+        assert_eq!(read_note(&root, key, "a.md").unwrap().raw, "note");
+        assert_eq!(
+            root.read(Path::new("repos/demo--12345678/notes/assets/a/image.png"))
+                .unwrap(),
+            b"image data"
         );
     }
 
