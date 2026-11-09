@@ -256,7 +256,6 @@ export function NoteView({
                 "srcset",
                 "xlink:href",
               ],
-              ALLOWED_URI_REGEXP: /^data:image\//i,
             })
           }
           sandbox=""
