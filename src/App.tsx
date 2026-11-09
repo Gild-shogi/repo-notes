@@ -34,6 +34,7 @@ function Main() {
   const [selectedRepoKey, setSelectedRepoKey] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [justCreatedFile, setJustCreatedFile] = useState<string | null>(null);
+  const [deleteWarnings, setDeleteWarnings] = useState<string[]>([]);
   const [repoPaneOpen, toggleRepoPane] = usePaneOpen("repos");
   const [notePaneOpen, toggleNotePane] = usePaneOpen("notes");
   const contentPaneRef = useRef<HTMLElement | null>(null);
@@ -42,11 +43,13 @@ function Main() {
     setSelectedRepoKey(repoKey);
     setSelectedFileName(null);
     setJustCreatedFile(null);
+    setDeleteWarnings([]);
   };
 
   const selectNote = (fileName: string) => {
     setSelectedFileName(fileName);
     setJustCreatedFile(null);
+    setDeleteWarnings([]);
   };
 
   const columns = [
@@ -79,6 +82,7 @@ function Main() {
               onCreated={(fileName) => {
                 setSelectedFileName(fileName);
                 setJustCreatedFile(fileName);
+                setDeleteWarnings([]);
               }}
             />
           )
@@ -95,13 +99,25 @@ function Main() {
         )}
       </SidePane>
       <main className="pane pane-content" ref={contentPaneRef}>
+        {deleteWarnings.length > 0 && (
+          <div className="pane-status error" role="status">
+            <p>ノートは削除しましたが、後処理が完了していません。</p>
+            <ul>{deleteWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+            <button type="button" className="btn" onClick={() => setDeleteWarnings([])}>
+              閉じる
+            </button>
+          </div>
+        )}
         {selectedRepoKey && selectedFileName ? (
           <NoteView
             key={`${selectedRepoKey}/${selectedFileName}`}
             repoKey={selectedRepoKey}
             fileName={selectedFileName}
             startInEdit={selectedFileName === justCreatedFile}
-            onDeleted={() => setSelectedFileName(null)}
+            onDeleted={(warnings) => {
+              setSelectedFileName(null);
+              setDeleteWarnings(warnings);
+            }}
             onNavigateNote={selectNote}
           />
         ) : (

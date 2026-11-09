@@ -1,10 +1,36 @@
 use std::path::{Path, PathBuf};
 
+use crate::store::{self, StoreState};
 use tauri_plugin_opener::OpenerExt;
+
+#[tauri::command]
+pub fn open_note(
+    app: tauri::AppHandle,
+    state: tauri::State<StoreState>,
+    repo_key: String,
+    file_name: String,
+    reveal: bool,
+) -> Result<(), String> {
+    let path = store::note_external_path(state.get()?, &repo_key, &file_name)?;
+    if reveal {
+        app.opener().reveal_item_in_dir(path)
+    } else {
+        app.opener().open_path(path.to_string_lossy(), None::<&str>)
+    }
+    .map_err(|error| format!("ノートを外部アプリで開けません: {error}"))
+}
 
 /// 実行系のファイルはノート内リンクから開かせない（openで即実行され得るもの）
 const BLOCKED_EXTENSIONS: &[&str] = &[
-    "app", "command", "terminal", "workflow", "scpt", "applescript", "jar", "pkg", "dmg",
+    "app",
+    "command",
+    "terminal",
+    "workflow",
+    "scpt",
+    "applescript",
+    "jar",
+    "pkg",
+    "dmg",
 ];
 
 /// ノート内リンクから開いてよいパスかを検証し、正規化済みパスを返す。
@@ -80,6 +106,8 @@ mod tests {
         assert!(validate_openable(cmd.to_str().unwrap(), home.path()).is_err());
 
         // 存在しないファイルは拒否
-        assert!(validate_openable(home.path().join("nope.md").to_str().unwrap(), home.path()).is_err());
+        assert!(
+            validate_openable(home.path().join("nope.md").to_str().unwrap(), home.path()).is_err()
+        );
     }
 }

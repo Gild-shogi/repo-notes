@@ -72,3 +72,9 @@ pub struct NoteContent {
     pub abs_path: String,
     pub updated_ms: i64,
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteOutcome {
+    pub cleanup_warnings: Vec<String>,
+}

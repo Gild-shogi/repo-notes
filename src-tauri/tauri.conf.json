@@ -22,7 +22,7 @@
     "security": {
       "assetProtocol": {
         "enable": true,
-        "scope": ["$HOME/.repo-notes/**"]
+        "scope": []
       },
       "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data:; frame-src asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost"
     }

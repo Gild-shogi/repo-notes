@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
-import { deleteNote, printView, readNote } from "../api";
+import { deleteNote, openNote, printView, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
 import { extractToc } from "../lib/toc";
 import {
@@ -25,7 +24,7 @@ interface Props {
   repoKey: string;
   fileName: string;
   startInEdit?: boolean;
-  onDeleted: () => void;
+  onDeleted: (cleanupWarnings: string[]) => void;
   onNavigateNote?: (fileName: string) => void;
 }
 
@@ -66,11 +65,15 @@ export function NoteView({
 
   const remove = useMutation({
     mutationFn: () => deleteNote(repoKey, fileName),
-    onSuccess: () => {
+    onSuccess: (outcome) => {
       queryClient.invalidateQueries({ queryKey: ["notes", repoKey] });
       queryClient.invalidateQueries({ queryKey: ["repos"] });
-      onDeleted();
+      onDeleted(outcome.cleanupWarnings);
     },
+  });
+
+  const open = useMutation({
+    mutationFn: (reveal: boolean) => openNote(repoKey, fileName, reveal),
   });
 
   if (isLoading) return <div className="pane-status">読み込み中…</div>;
@@ -119,7 +122,7 @@ export function NoteView({
               className="icon-action"
               title="エディタで開く"
               aria-label="エディタで開く"
-              onClick={() => openPath(note.absPath)}
+              onClick={() => open.mutate(false)}
             >
               <OpenExternalIcon />
             </button>
@@ -128,7 +131,7 @@ export function NoteView({
               className="icon-action"
               title="Finderで表示"
               aria-label="Finderで表示"
-              onClick={() => revealItemInDir(note.absPath)}
+              onClick={() => open.mutate(true)}
             >
               <FolderIcon />
             </button>
@@ -198,6 +201,9 @@ export function NoteView({
           <div className="pane-status error">
             削除に失敗しました: {String(remove.error)}
           </div>
+        )}
+        {open.isError && (
+          <div className="pane-status error">{String(open.error)}</div>
         )}
       </header>
       {note.kind === "md" ? (

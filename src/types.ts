@@ -1,5 +1,9 @@
 export type NoteKind = "md" | "html";
 
+export interface DeleteOutcome {
+  cleanupWarnings: string[];
+}
+
 export interface RepoSummary {
   repoKey: string;
   repoName: string;

@@ -32,6 +32,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check TypeScript
         run: pnpm exec tsc --noEmit
+      - name: Check React rules
+        run: pnpm lint
       - name: Test frontend behavior
         run: pnpm test
       - name: Test agent skill scripts

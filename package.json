@@ -13,6 +13,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "lint": "node --experimental-strip-types ./node_modules/eslint/bin/eslint.js --flag unstable_native_nodejs_ts_config src --max-warnings 0",
     "test:skill": "bash tests/skill/test-resolve-note-dir.sh && bash tests/skill/test-session-start-notes.sh",
     "tauri": "tauri"
   },
@@ -43,7 +44,10 @@
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@typescript-eslint/parser": "8.72.1",
     "@vitejs/plugin-react": "^4.6.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
     "vitest": "^4.1.9"
