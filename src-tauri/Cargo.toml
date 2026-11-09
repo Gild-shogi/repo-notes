@@ -27,6 +27,8 @@ chrono = "0.4"
 dirs = "6"
 notify = "8"
 notify-debouncer-full = "0.5"
+cap-std = "4.0.3"
+percent-encoding = "2.3"
 tauri-plugin-clipboard-manager = "2.3.2"
 
 [dev-dependencies]
