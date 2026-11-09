@@ -93,6 +93,20 @@ fn note_path(root: &DataRoot, repo_key: &str, file_name: &str) -> Result<PathBuf
     Ok(notes_dir(root, repo_key)?.join(file_name))
 }
 
+pub fn note_external_path(
+    root: &DataRoot,
+    repo_key: &str,
+    file_name: &str,
+) -> Result<PathBuf, String> {
+    let relative = note_path(root, repo_key, file_name)?;
+    let file = root.dir.open(&relative).map_err(storage_error)?;
+    if !file.metadata().map_err(storage_error)?.is_file() {
+        return Err("ノートが通常ファイルではありません".into());
+    }
+    let relative = root.dir.canonicalize(relative).map_err(storage_error)?;
+    Ok(root.path.join(relative))
+}
+
 fn mtime_ms(root: &DataRoot, path: &Path) -> i64 {
     root.dir
         .metadata(path)

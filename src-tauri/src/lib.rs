@@ -43,6 +43,7 @@ pub fn run() {
             commands::set_repo_pinned,
             commands::print_view,
             open_link::open_local_path,
+            open_link::open_note,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

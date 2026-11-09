@@ -18,6 +18,9 @@ export const setRepoPinned = (repoKey: string, pinned: boolean) =>
 export const openLocalPath = (path: string) =>
   invoke<void>("open_local_path", { path });
 
+export const openNote = (repoKey: string, fileName: string, reveal = false) =>
+  invoke<void>("open_note", { repoKey, fileName, reveal });
+
 export const readNote = (repoKey: string, fileName: string) =>
   invoke<NoteContent>("read_note", { repoKey, fileName });
 
