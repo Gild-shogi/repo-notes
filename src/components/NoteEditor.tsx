@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
@@ -28,13 +28,10 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
     },
   });
 
-  // keymap から常に最新値を保存できるよう ref に保持する
-  const latest = useRef(content);
-  latest.current = content;
-  const saveRef = useRef(() => {});
-  saveRef.current = () => {
-    if (!save.isPending) save.mutate(latest.current);
-  };
+  const { isPending, mutate } = save;
+  const saveContent = useCallback((value: string) => {
+    if (!isPending) mutate(value);
+  }, [isPending, mutate]);
 
   const extensions = useMemo(
     () => [
@@ -44,14 +41,14 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
       keymap.of([
         {
           key: "Mod-s",
-          run: () => {
-            saveRef.current();
+          run: (view: EditorView) => {
+            saveContent(view.state.doc.toString());
             return true;
           },
         },
       ]),
     ],
-    [],
+    [saveContent],
   );
 
   return (
@@ -73,7 +70,7 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
           type="button"
           className="btn primary"
           disabled={!dirty || save.isPending}
-          onClick={() => saveRef.current()}
+          onClick={() => saveContent(content)}
         >
           保存 (⌘S)
         </button>
@@ -86,7 +83,7 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
           setDirty(true);
         }}
         onBlur={() => {
-          if (dirty) saveRef.current();
+          if (dirty) saveContent(content);
         }}
         autoFocus
         basicSetup={{
