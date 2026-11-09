@@ -24,7 +24,7 @@ interface Props {
   repoKey: string;
   fileName: string;
   startInEdit?: boolean;
-  onDeleted: () => void;
+  onDeleted: (cleanupWarnings: string[]) => void;
   onNavigateNote?: (fileName: string) => void;
 }
 
@@ -65,10 +65,10 @@ export function NoteView({
 
   const remove = useMutation({
     mutationFn: () => deleteNote(repoKey, fileName),
-    onSuccess: () => {
+    onSuccess: (outcome) => {
       queryClient.invalidateQueries({ queryKey: ["notes", repoKey] });
       queryClient.invalidateQueries({ queryKey: ["repos"] });
-      onDeleted();
+      onDeleted(outcome.cleanupWarnings);
     },
   });
 
