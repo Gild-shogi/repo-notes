@@ -2,5 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    if let Some(code) = repo_notes_lib::run_cli(std::env::args_os().skip(1).collect()) {
+        std::process::exit(code);
+    }
     repo_notes_lib::run()
 }

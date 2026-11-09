@@ -1,10 +1,14 @@
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use cap_std::fs::{Dir, OpenOptions};
 
-use crate::model::{DeleteOutcome, NoteContent, NoteKind, NoteMeta, NoteSummary, RepoMeta, RepoSummary};
+use crate::model::{
+    DeleteOutcome, NoteContent, NoteKind, NoteMeta, NoteSummary, RepoMeta, RepoSummary, SaveError,
+    SaveOutcome,
+};
 use crate::parse;
 
 pub fn data_root() -> PathBuf {
@@ -26,6 +30,10 @@ pub struct DataRoot {
 impl DataRoot {
     pub fn open(path: &Path) -> Result<Self, String> {
         fs::create_dir_all(path).map_err(storage_error)?;
+        Self::open_existing(path)
+    }
+
+    pub fn open_existing(path: &Path) -> Result<Self, String> {
         let path = path.canonicalize().map_err(storage_error)?;
         let dir =
             Dir::open_ambient_dir(&path, cap_std::ambient_authority()).map_err(storage_error)?;
@@ -38,6 +46,84 @@ impl DataRoot {
 
     pub fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
         self.dir.read(path)
+    }
+
+    fn lock(&self) -> Result<fs::File, String> {
+        // macOSでcreate(true)の初回同時openがENOENTになるため、作成と既存openを分ける。
+        // このinodeを置換・削除すると別プロセスとの排他が分断される。
+        let path = ".repo-notes.write.lock";
+        let file = match self.dir.open_with(
+            path,
+            OpenOptions::new().read(true).write(true).create_new(true),
+        ) {
+            Ok(file) => Ok(file),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => self
+                .dir
+                .open_with(path, OpenOptions::new().read(true).write(true)),
+            Err(error) => Err(error),
+        }
+        .map_err(|error| format!("排他ファイルを開けません: {error}"))?
+        .into_std();
+        file.lock()
+            .map_err(|error| format!("排他ファイルをロックできません: {error}"))?;
+        Ok(file)
+    }
+}
+
+fn atomic_write(
+    root: &DataRoot,
+    path: &Path,
+    content: &[u8],
+    new: bool,
+    permissions: Option<cap_std::fs::Permissions>,
+) -> io::Result<SaveOutcome> {
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+    let parent = path
+        .parent()
+        .ok_or_else(|| io::Error::other("保存先が不正です"))?;
+    let (temp, mut file) = loop {
+        let name = format!(
+            ".repo-notes-save-{}-{}",
+            std::process::id(),
+            SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        );
+        let temp = parent.join(name);
+        match root
+            .dir
+            .open_with(&temp, OpenOptions::new().write(true).create_new(true))
+        {
+            Ok(file) => break (temp, file),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
+    };
+    let result = (|| {
+        if let Some(permissions) = permissions {
+            file.set_permissions(permissions)?;
+        }
+        file.write_all(content)?;
+        file.sync_all()?;
+        drop(file);
+        if new {
+            root.dir.hard_link(&temp, &root.dir, path)?;
+        } else {
+            root.dir.rename(&temp, &root.dir, path)?;
+        }
+        Ok(())
+    })();
+    let cleanup = match root.dir.remove_file(&temp) {
+        Ok(()) => None,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+        Err(error) => Some(format!("一時ファイルを削除できません: {error}")),
+    };
+    match (result, cleanup) {
+        (Ok(()), warning) => Ok(SaveOutcome {
+            cleanup_warnings: warning.into_iter().collect(),
+        }),
+        (Err(error), None) => Err(error),
+        (Err(error), Some(warning)) => {
+            Err(io::Error::new(error.kind(), format!("{error}; {warning}")))
+        }
     }
 }
 
@@ -274,9 +360,30 @@ fn write_pins_file(
     pins.sort();
     let json = serde_json::to_string_pretty(&Pins { pinned: pins })
         .map_err(|e| format!("ピン状態のシリアライズに失敗: {e}"))?;
-    root.dir
-        .write(path, json)
-        .map_err(|e| format!("ピン状態の保存に失敗: {e}"))
+    let target = match root
+        .dir
+        .open_with(path, OpenOptions::new().read(true).write(true))
+    {
+        Ok(file) => (
+            root.dir.canonicalize(path).map_err(storage_error)?,
+            Some(file.metadata().map_err(storage_error)?.permissions()),
+        ),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => (path.to_path_buf(), None),
+        Err(error) => return Err(format!("ピン状態の保存に失敗: {error}")),
+    };
+    atomic_write(
+        root,
+        &target.0,
+        json.as_bytes(),
+        target.1.is_none(),
+        target.1,
+    )
+    .map(|outcome| {
+        for warning in outcome.cleanup_warnings {
+            eprintln!("{warning}");
+        }
+    })
+    .map_err(|e| format!("ピン状態の保存に失敗: {e}"))
 }
 
 fn load_pins(root: &DataRoot, repo_key: &str) -> Result<std::collections::HashSet<String>, String> {
@@ -289,6 +396,7 @@ pub fn set_pinned(
     file_name: &str,
     pinned: bool,
 ) -> Result<(), String> {
+    let _lock = root.lock()?;
     // 実在するノートのみピン留め可能（パス検証込み）
     let path = note_path(root, repo_key, file_name)?;
     if pinned && !root.dir.metadata(&path).map_err(storage_error)?.is_file() {
@@ -313,6 +421,7 @@ fn load_repo_pins(root: &DataRoot) -> Result<std::collections::HashSet<String>, 
 }
 
 pub fn set_repo_pinned(root: &DataRoot, repo_key: &str, pinned: bool) -> Result<(), String> {
+    let _lock = root.lock()?;
     validate_segment(repo_key)?;
     if pinned
         && !root
@@ -393,23 +502,90 @@ pub fn write_note(
     repo_key: &str,
     file_name: &str,
     content: &str,
-) -> Result<(), String> {
-    let path = note_path(root, repo_key, file_name)?;
+    expected_raw: &str,
+) -> Result<SaveOutcome, SaveError> {
     if note_kind(file_name)? != NoteKind::Md {
-        return Err("編集できるのはMarkdownノートのみです".into());
+        return Err(SaveError::Failure(
+            "編集できるのはMarkdownノートのみです".into(),
+        ));
     }
-    let mut file = root
+    save_note(root, repo_key, file_name, Some(expected_raw), content)
+}
+
+pub fn save_note(
+    root: &DataRoot,
+    repo_key: &str,
+    file_name: &str,
+    expected_raw: Option<&str>,
+    content: &str,
+) -> Result<SaveOutcome, SaveError> {
+    let _lock = root.lock()?;
+    let (target, permissions) = prepare_save(root, repo_key, file_name, expected_raw)?;
+    atomic_write(
+        root,
+        &target,
+        content.as_bytes(),
+        expected_raw.is_none(),
+        permissions,
+    )
+    .map_err(|error| {
+        if error.kind() == io::ErrorKind::AlreadyExists {
+            SaveError::Conflict
+        } else {
+            storage_error(error).into()
+        }
+    })
+}
+
+pub fn check_note_save(
+    root: &DataRoot,
+    repo_key: &str,
+    file_name: &str,
+    expected_raw: Option<&str>,
+) -> Result<(), SaveError> {
+    prepare_save(root, repo_key, file_name, expected_raw).map(|_| ())
+}
+
+fn prepare_save(
+    root: &DataRoot,
+    repo_key: &str,
+    file_name: &str,
+    expected_raw: Option<&str>,
+) -> Result<(PathBuf, Option<cap_std::fs::Permissions>), SaveError> {
+    let path = note_path(root, repo_key, file_name)?;
+    let opened = root
         .dir
-        .open_with(&path, OpenOptions::new().write(true))
-        .map_err(storage_error)?;
-    if !file.metadata().map_err(storage_error)?.is_file() {
-        return Err(format!("通常ファイルではありません: {file_name}"));
-    }
-    file.set_len(0).map_err(storage_error)?;
-    file.write_all(content.as_bytes()).map_err(storage_error)
+        .open_with(&path, OpenOptions::new().read(true).write(true));
+    let (target, permissions) = match (opened, expected_raw) {
+        (Ok(mut file), Some(expected)) => {
+            let metadata = file.metadata().map_err(storage_error)?;
+            if !metadata.is_file() {
+                return Err(SaveError::Failure("通常ファイルではありません".into()));
+            }
+            let mut current = String::new();
+            file.read_to_string(&mut current).map_err(storage_error)?;
+            if current != expected {
+                return Err(SaveError::Conflict);
+            }
+            (
+                root.dir
+                    .canonicalize(&path)
+                    .map_err(|error| format!("保存対象の実体を解決できません: {error}"))?,
+                Some(metadata.permissions()),
+            )
+        }
+        (Ok(_), None) => return Err(SaveError::Conflict),
+        (Err(error), None) if error.kind() == io::ErrorKind::NotFound => (path, None),
+        (Err(error), Some(_)) if error.kind() == io::ErrorKind::NotFound => {
+            return Err(SaveError::Conflict)
+        }
+        (Err(error), _) => return Err(storage_error(error).into()),
+    };
+    Ok((target, permissions))
 }
 
 pub fn create_note(root: &DataRoot, repo_key: &str, title: &str) -> Result<String, String> {
+    let _lock = root.lock()?;
     let dir = notes_dir(root, repo_key)?;
     let title = title.trim();
     if title.is_empty() {
@@ -428,12 +604,11 @@ pub fn create_note(root: &DataRoot, repo_key: &str, title: &str) -> Result<Strin
         } else {
             format!("{base}-{n}.md")
         };
-        match root.dir.open_with(
-            dir.join(&file_name),
-            OpenOptions::new().write(true).create_new(true),
-        ) {
-            Ok(mut file) => {
-                file.write_all(content.as_bytes()).map_err(storage_error)?;
+        match atomic_write(root, &dir.join(&file_name), content.as_bytes(), true, None) {
+            Ok(outcome) => {
+                for warning in outcome.cleanup_warnings {
+                    eprintln!("{warning}");
+                }
                 return Ok(file_name);
             }
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
@@ -471,7 +646,12 @@ fn slugify(title: &str) -> String {
     }
 }
 
-pub fn delete_note(root: &DataRoot, repo_key: &str, file_name: &str) -> Result<DeleteOutcome, String> {
+pub fn delete_note(
+    root: &DataRoot,
+    repo_key: &str,
+    file_name: &str,
+) -> Result<DeleteOutcome, String> {
+    let _lock = root.lock()?;
     let path = note_path(root, repo_key, file_name)?;
     if !root.dir.metadata(&path).map_err(storage_error)?.is_file() {
         return Err(format!("ノートが存在しません: {file_name}"));
@@ -518,6 +698,99 @@ mod tests {
     }
 
     #[test]
+    fn stale_save_is_rejected_without_losing_external_update() {
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        fs::write(
+            tmp.path().join("repos").join(key).join("notes/a.md"),
+            "external update",
+        )
+        .unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+        assert!(matches!(
+            save_note(&root, key, "a.md", Some("original"), "draft"),
+            Err(SaveError::Conflict)
+        ));
+        assert_eq!(
+            read_note(&root, key, "a.md").unwrap().raw,
+            "external update"
+        );
+    }
+
+    #[test]
+    fn shared_writer_creates_new_html_without_overwriting_existing_note() {
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let root = DataRoot::open(tmp.path()).unwrap();
+        save_note(&root, key, "a.html", None, "<title>new</title>").unwrap();
+        assert!(matches!(
+            save_note(&root, key, "a.html", None, "replacement"),
+            Err(SaveError::Conflict)
+        ));
+        assert_eq!(
+            read_note(&root, key, "a.html").unwrap().raw,
+            "<title>new</title>"
+        );
+    }
+
+    #[test]
+    fn saving_a_deleted_note_does_not_recreate_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let root = DataRoot::open(tmp.path()).unwrap();
+        assert!(matches!(
+            save_note(&root, key, "gone.md", Some("original"), "draft"),
+            Err(SaveError::Conflict)
+        ));
+        assert!(list_notes(&root, key, None).unwrap().is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn failed_atomic_save_preserves_original_content() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let notes = tmp.path().join("repos").join(key).join("notes");
+        fs::write(notes.join("a.md"), "original").unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+        fs::set_permissions(&notes, fs::Permissions::from_mode(0o555)).unwrap();
+        let result = save_note(&root, key, "a.md", Some("original"), "replacement");
+        fs::set_permissions(&notes, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(matches!(result, Err(SaveError::Failure(_))));
+        assert_eq!(read_note(&root, key, "a.md").unwrap().raw, "original");
+    }
+
+    #[test]
+    fn concurrent_pin_updates_preserve_both_changes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let root = DataRoot::open(tmp.path()).unwrap();
+        save_note(&root, key, "a.md", None, "a").unwrap();
+        save_note(&root, key, "b.md", None, "b").unwrap();
+        let barrier = std::sync::Barrier::new(2);
+        std::thread::scope(|scope| {
+            for name in ["a.md", "b.md"] {
+                let barrier = &barrier;
+                let root = &root;
+                scope.spawn(move || {
+                    barrier.wait();
+                    set_pinned(root, key, name, true).unwrap();
+                });
+            }
+        });
+        assert!(list_notes(&root, key, None)
+            .unwrap()
+            .iter()
+            .all(|note| note.pinned));
+    }
+
+    #[test]
     fn rejects_path_traversal() {
         let tmp = tempfile::tempdir().unwrap();
         setup_repo(tmp.path(), "demo--12345678");
@@ -556,7 +829,8 @@ mod tests {
             &DataRoot::open(tmp.path()).unwrap(),
             key,
             "linked.md",
-            "overwritten"
+            "overwritten",
+            "outside data"
         )
         .is_err());
         assert_eq!(fs::read_to_string(&secret).unwrap(), "outside data");
@@ -656,13 +930,15 @@ mod tests {
         let repo = tmp.path().join("repos").join(key);
         fs::write(repo.join("notes/a.md"), "note").unwrap();
         fs::write(repo.join("pins.json"), r#"{"pinned":["a.md"]}"#).unwrap();
-        fs::set_permissions(repo.join("pins.json"), fs::Permissions::from_mode(0o444))
-            .unwrap();
+        fs::set_permissions(repo.join("pins.json"), fs::Permissions::from_mode(0o444)).unwrap();
         let root = DataRoot::open(tmp.path()).unwrap();
 
         let result = delete_note(&root, key, "a.md");
         assert!(read_note(&root, key, "a.md").is_err());
-        assert!(result.is_ok(), "削除済みのノートを失敗扱いしない: {result:?}");
+        assert!(
+            result.is_ok(),
+            "削除済みのノートを失敗扱いしない: {result:?}"
+        );
         let outcome = result.unwrap();
         assert_eq!(outcome.cleanup_warnings.len(), 1);
         assert!(outcome.cleanup_warnings[0].contains("ピン状態の保存に失敗"));
@@ -699,7 +975,7 @@ mod tests {
         fs::remove_file(&alias).unwrap();
         std::os::unix::fs::symlink(outside.path(), &alias).unwrap();
         assert_eq!(read_note(&root, key, "alias.md").unwrap().raw, "original");
-        write_note(&root, key, "alias.md", "updated").unwrap();
+        write_note(&root, key, "alias.md", "updated", "original").unwrap();
         assert_eq!(read_note(&root, key, "actual.md").unwrap().raw, "updated");
     }
 
@@ -749,6 +1025,7 @@ mod tests {
             key,
             &file_name,
             "---\ntitle: 更新後\ncreated: 2026-07-02\n---\n\n# 中身\n",
+            &note.raw,
         )
         .unwrap();
         let note = read_note(&DataRoot::open(tmp.path()).unwrap(), key, &file_name).unwrap();
@@ -791,8 +1068,15 @@ mod tests {
             "<html></html>",
         )
         .unwrap();
-        assert!(write_note(&DataRoot::open(tmp.path()).unwrap(), key, "v.html", "x").is_err());
-        assert!(write_note(&DataRoot::open(tmp.path()).unwrap(), key, "missing.md", "x").is_err());
+        assert!(write_note(&DataRoot::open(tmp.path()).unwrap(), key, "v.html", "x", "").is_err());
+        assert!(write_note(
+            &DataRoot::open(tmp.path()).unwrap(),
+            key,
+            "missing.md",
+            "x",
+            ""
+        )
+        .is_err());
     }
 
     #[test]

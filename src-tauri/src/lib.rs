@@ -1,4 +1,6 @@
 mod asset;
+mod cli;
+pub use cli::run as run_cli;
 mod commands;
 mod model;
 mod open_link;
@@ -15,15 +17,21 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .register_uri_scheme_protocol("asset", |context, request| {
-            let state = context.app_handle().state::<store::StoreState>();
-            match state.get() {
-                Ok(root) => asset::response(root, request),
-                Err(_) => tauri::http::Response::builder()
-                    .status(500)
-                    .body(Vec::<u8>::new())
-                    .unwrap(),
-            }
+        .register_asynchronous_uri_scheme_protocol("asset", |context, request, responder| {
+            let app = context.app_handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let response = commands::store_io(app, move |root| {
+                    Ok::<_, String>(asset::response(root, request))
+                })
+                .await
+                .unwrap_or_else(|_| {
+                    tauri::http::Response::builder()
+                        .status(500)
+                        .body(Vec::<u8>::new())
+                        .unwrap()
+                });
+                responder.respond(response);
+            });
         })
         .setup(|app| {
             if let Ok(root) = app.state::<store::StoreState>().get() {
