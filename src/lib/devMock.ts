@@ -1,10 +1,5 @@
 /**
- * ブラウザ単体でUIを確認するための Tauri API モック。
- * `pnpm dev` で起動した vite をブラウザで直接開いたときのみ有効になる
- * （Tauri 上では __TAURI_INTERNALS__ が既に存在するため何もしない）。
- *
- * 制限: convertFileSrc はパスをそのまま返すため、画像・HTMLノートの
- * iframe は実際には読み込めない。レイアウト・Markdown・Mermaid の確認用。
+ * ブラウザ単体ではasset protocolを使えないため、Markdownの画像は表示できない。
  */
 
 const MD_FIXTURE = `---
