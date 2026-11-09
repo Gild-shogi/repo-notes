@@ -30,6 +30,10 @@ pub struct DataRoot {
 impl DataRoot {
     pub fn open(path: &Path) -> Result<Self, String> {
         fs::create_dir_all(path).map_err(storage_error)?;
+        Self::open_existing(path)
+    }
+
+    pub fn open_existing(path: &Path) -> Result<Self, String> {
         let path = path.canonicalize().map_err(storage_error)?;
         let dir =
             Dir::open_ambient_dir(&path, cap_std::ambient_authority()).map_err(storage_error)?;
@@ -45,16 +49,23 @@ impl DataRoot {
     }
 
     fn lock(&self) -> Result<fs::File, String> {
+        // macOSでcreate(true)の初回同時openがENOENTになるため、作成と既存openを分ける。
         // このinodeを置換・削除すると別プロセスとの排他が分断される。
-        let file = self
-            .dir
-            .open_with(
-                ".repo-notes.write.lock",
-                OpenOptions::new().read(true).write(true).create(true),
-            )
-            .map_err(storage_error)?
-            .into_std();
-        file.lock().map_err(storage_error)?;
+        let path = ".repo-notes.write.lock";
+        let file = match self.dir.open_with(
+            path,
+            OpenOptions::new().read(true).write(true).create_new(true),
+        ) {
+            Ok(file) => Ok(file),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => self
+                .dir
+                .open_with(path, OpenOptions::new().read(true).write(true)),
+            Err(error) => Err(error),
+        }
+        .map_err(|error| format!("排他ファイルを開けません: {error}"))?
+        .into_std();
+        file.lock()
+            .map_err(|error| format!("排他ファイルをロックできません: {error}"))?;
         Ok(file)
     }
 }
@@ -509,6 +520,38 @@ pub fn save_note(
     content: &str,
 ) -> Result<SaveOutcome, SaveError> {
     let _lock = root.lock()?;
+    let (target, permissions) = prepare_save(root, repo_key, file_name, expected_raw)?;
+    atomic_write(
+        root,
+        &target,
+        content.as_bytes(),
+        expected_raw.is_none(),
+        permissions,
+    )
+    .map_err(|error| {
+        if error.kind() == io::ErrorKind::AlreadyExists {
+            SaveError::Conflict
+        } else {
+            storage_error(error).into()
+        }
+    })
+}
+
+pub fn check_note_save(
+    root: &DataRoot,
+    repo_key: &str,
+    file_name: &str,
+    expected_raw: Option<&str>,
+) -> Result<(), SaveError> {
+    prepare_save(root, repo_key, file_name, expected_raw).map(|_| ())
+}
+
+fn prepare_save(
+    root: &DataRoot,
+    repo_key: &str,
+    file_name: &str,
+    expected_raw: Option<&str>,
+) -> Result<(PathBuf, Option<cap_std::fs::Permissions>), SaveError> {
     let path = note_path(root, repo_key, file_name)?;
     let opened = root
         .dir
@@ -525,7 +568,9 @@ pub fn save_note(
                 return Err(SaveError::Conflict);
             }
             (
-                root.dir.canonicalize(&path).map_err(storage_error)?,
+                root.dir
+                    .canonicalize(&path)
+                    .map_err(|error| format!("保存対象の実体を解決できません: {error}"))?,
                 Some(metadata.permissions()),
             )
         }
@@ -536,20 +581,7 @@ pub fn save_note(
         }
         (Err(error), _) => return Err(storage_error(error).into()),
     };
-    atomic_write(
-        root,
-        &target,
-        content.as_bytes(),
-        expected_raw.is_none(),
-        permissions,
-    )
-    .map_err(|error| {
-        if error.kind() == io::ErrorKind::AlreadyExists {
-            SaveError::Conflict
-        } else {
-            storage_error(error).into()
-        }
-    })
+    Ok((target, permissions))
 }
 
 pub fn create_note(root: &DataRoot, repo_key: &str, title: &str) -> Result<String, String> {

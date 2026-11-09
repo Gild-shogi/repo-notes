@@ -1,4 +1,6 @@
 mod asset;
+mod cli;
+pub use cli::run as run_cli;
 mod commands;
 mod model;
 mod open_link;
