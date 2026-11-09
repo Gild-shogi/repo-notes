@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DeleteOutcome, NoteContent, NoteSummary, RepoSummary } from "./types";
+import type { DeleteOutcome, NoteContent, NoteSummary, RepoSummary, SaveOutcome } from "./types";
 
 export const getDataRoot = () => invoke<string>("get_data_root");
 
@@ -24,8 +24,8 @@ export const openNote = (repoKey: string, fileName: string, reveal = false) =>
 export const readNote = (repoKey: string, fileName: string) =>
   invoke<NoteContent>("read_note", { repoKey, fileName });
 
-export const writeNote = (repoKey: string, fileName: string, content: string) =>
-  invoke<void>("write_note", { repoKey, fileName, content });
+export const writeNote = (repoKey: string, fileName: string, content: string, expectedRaw: string) =>
+  invoke<SaveOutcome>("write_note", { repoKey, fileName, content, expectedRaw });
 
 export const createNote = (repoKey: string, title: string) =>
   invoke<string>("create_note", { repoKey, title });

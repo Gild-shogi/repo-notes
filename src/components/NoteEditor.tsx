@@ -4,8 +4,10 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { keymap, EditorView } from "@codemirror/view";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { writeNote } from "../api";
+import { readNote, writeNote } from "../api";
+import type { SaveError, SaveOutcome } from "../types";
 import { editorExtensions } from "../lib/editorTheme";
+import { useNoteDraft } from "../lib/noteDrafts";
 
 interface Props {
   repoKey: string;
@@ -14,24 +16,42 @@ interface Props {
 }
 
 export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
-  const [content, setContent] = useState(initialContent);
-  const [dirty, setDirty] = useState(false);
+  const [draft, updateDraft] = useNoteDraft(repoKey, fileName, initialContent);
+  const { content, expectedRaw: savedContent, operation } = draft;
+  const [confirmingReload, setConfirmingReload] = useState(false);
+  const dirty = content !== savedContent;
+  const saving = operation.kind === "saving";
+  const reloading = operation.kind === "reloading";
+  const saveError = operation.kind === "save-error" ? operation.error : null;
+  const conflict = saveError?.kind === "conflict" || operation.kind === "reload-error" || reloading;
   const queryClient = useQueryClient();
 
-  const save = useMutation({
-    mutationFn: (value: string) => writeNote(repoKey, fileName, value),
-    onSuccess: () => {
-      setDirty(false);
+  const save = useMutation<SaveOutcome, SaveError, { content: string; expectedRaw: string }>({
+    mutationFn: (input) => writeNote(repoKey, fileName, input.content, input.expectedRaw),
+    onMutate: () => updateDraft((current) => ({ ...current, operation: { kind: "saving" } })),
+    onError: (error) => updateDraft((current) => ({ ...current, operation: { kind: "save-error", error } })),
+    onSuccess: (outcome, input) => {
+      updateDraft((current) => ({ ...current, expectedRaw: input.content, operation: { kind: "idle" }, cleanupWarnings: outcome.cleanupWarnings }));
       queryClient.invalidateQueries({ queryKey: ["note", repoKey, fileName] });
       queryClient.invalidateQueries({ queryKey: ["notes", repoKey] });
       queryClient.invalidateQueries({ queryKey: ["repos"] });
     },
   });
 
-  const { isPending, mutate } = save;
+  const reload = useMutation({
+    mutationFn: () => readNote(repoKey, fileName),
+    onMutate: () => updateDraft((current) => ({ ...current, operation: { kind: "reloading" } })),
+    onError: (error) => updateDraft((current) => ({ ...current, operation: { kind: "reload-error", message: String(error) } })),
+    onSuccess: (note) => {
+      updateDraft(() => ({ content: note.raw, expectedRaw: note.raw, operation: { kind: "idle" }, cleanupWarnings: [] }));
+      setConfirmingReload(false);
+    },
+  });
+
+  const { mutate } = save;
   const saveContent = useCallback((value: string) => {
-    if (!isPending) mutate(value);
-  }, [isPending, mutate]);
+    if (!saving && !reloading && !conflict) mutate({ content: value, expectedRaw: savedContent });
+  }, [saving, mutate, reloading, conflict, savedContent]);
 
   const extensions = useMemo(
     () => [
@@ -55,21 +75,34 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
     <div className="note-editor">
       <div className="editor-toolbar">
         <span className={`editor-status ${dirty ? "dirty" : ""}`}>
-          {save.isPending
+          {saving
             ? "保存中…"
             : dirty
               ? "未保存の変更あり"
               : "保存済み"}
         </span>
-        {save.isError && (
+        {saveError && (
           <span className="editor-status error">
-            保存に失敗しました: {String(save.error)}
+            {conflict
+              ? "別の書き込みで更新されています。保存を拒否し、下書きを保持しました。必要な内容を控えてから最新を読み込んでください。"
+              : `保存に失敗しました: ${saveError.kind === "failure" ? saveError.message : String(saveError)}`}
           </span>
         )}
+        {draft.cleanupWarnings.map((warning) => <span className="editor-status error" key={warning}>{warning}</span>)}
+        {operation.kind === "reload-error" && <span className="editor-status error">再読込に失敗しました。下書きは保持しています: {operation.message}</span>}
+        {conflict && (confirmingReload ? (
+          <>
+            <span className="editor-status error">下書きを破棄して最新内容を読み込みます。</span>
+            <button type="button" className="btn danger" disabled={reloading} onClick={() => reload.mutate()}>破棄して読込</button>
+            <button type="button" className="btn" disabled={reloading} onClick={() => setConfirmingReload(false)}>取消</button>
+          </>
+        ) : (
+          <button type="button" className="btn" onClick={() => setConfirmingReload(true)}>下書きを破棄して最新を読込</button>
+        ))}
         <button
           type="button"
           className="btn primary"
-          disabled={!dirty || save.isPending}
+          disabled={!dirty || saving || reloading || conflict}
           onClick={() => saveContent(content)}
         >
           保存 (⌘S)
@@ -77,10 +110,10 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
       </div>
       <CodeMirror
         value={content}
+        editable={!reloading}
         extensions={extensions}
         onChange={(value) => {
-          setContent(value);
-          setDirty(true);
+          updateDraft((current) => ({ ...current, content: value }));
         }}
         onBlur={() => {
           if (dirty) saveContent(content);
