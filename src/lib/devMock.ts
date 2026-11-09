@@ -184,6 +184,7 @@ export function installDevMock() {
         notes.delete(args.fileName as string);
         return null;
       case "open_local_path":
+      case "open_note":
         console.log("[devMock] open_local_path:", args);
         return null;
       case "print_view":

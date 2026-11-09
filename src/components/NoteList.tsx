@@ -16,7 +16,7 @@ export function NoteList({ repoKey, selectedFileName, onSelect }: Props) {
   const query = useDebouncedValue(search.trim(), 200);
   const queryClient = useQueryClient();
 
-  const { data: notes, isLoading } = useQuery({
+  const { data: notes, isLoading, error } = useQuery({
     queryKey: ["notes", repoKey, query],
     queryFn: () => listNotes(repoKey, query || undefined),
   });
@@ -39,8 +39,11 @@ export function NoteList({ repoKey, selectedFileName, onSelect }: Props) {
           onChange={(e) => setSearch(e.currentTarget.value)}
         />
       </div>
+      {pin.isError && <div className="pane-status error">{String(pin.error)}</div>}
       {isLoading ? (
         <div className="pane-status">読み込み中…</div>
+      ) : error ? (
+        <div className="pane-status error">ノートを読み込めません: {String(error)}</div>
       ) : !notes || notes.length === 0 ? (
         <div className="pane-status">
           {query ? `「${query}」に一致するノートがありません。` : "ノートがありません。"}
