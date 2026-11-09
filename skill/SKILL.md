@@ -21,11 +21,14 @@ description: ユーザーのキャッチアップ用メモをGitリポジトリ�
 
 ```bash
 NOTES_DIR=$(bash ~/.claude/skills/repo-notes/scripts/resolve-note-dir.sh)
+REPO_KEY=$(basename "$(dirname "$NOTES_DIR")")
+NOTES_CLI="$HOME/.claude/skills/repo-notes/bin/repo-notes"
 ```
 
 - 引数省略時はカレントディレクトリのリポジトリが対象。別リポジトリを対象にする場合はパスを渡す
 - `--json` を付けると `{"repoKey":...,"repoName":...,"notesDir":...,"assetsDir":...,"created":...}` が得られる
 - Gitリポジトリ外では exit 2 で失敗する。その場合はユーザーにメモの対象リポジトリを確認する
+- `bin/repo-notes` が無ければ `make install-skill` による更新をユーザーに案内する。ノート本体の保存はこのコマンドを使う
 
 ### 2. ファイル名を決めてメモを作成する
 
@@ -33,7 +36,10 @@ NOTES_DIR=$(bash ~/.claude/skills/repo-notes/scripts/resolve-note-dir.sh)
 
 ```bash
 ls "$NOTES_DIR"   # 既存メモの確認（同名があれば -2, -3 を付ける）
+NOTE_WORK=$(mktemp -d)
 ```
+
+本文は `$NOTE_WORK/draft.md`（HTMLなら `draft.html`）に作成する。ノート本体への直接の Write/Edit やシェルリダイレクトは、アプリとの競合検出に参加しないため使わない。
 
 ### 3-a. Markdownメモ（デフォルト）
 
@@ -75,7 +81,16 @@ Mermaidで表現できないカスタム可視化（インタラクティブな�
 ...
 ```
 
-### 4. 作成後にユーザーへ報告する
+### 4. 新規ノートの保存
+
+```bash
+"$NOTES_CLI" note write --repo-key "$REPO_KEY" --file-name "YYYY-MM-DD-topic.md" --new --content-file "$NOTE_WORK/draft.md" --dry-run
+"$NOTES_CLI" note write --repo-key "$REPO_KEY" --file-name "YYYY-MM-DD-topic.md" --new --content-file "$NOTE_WORK/draft.md"
+```
+
+`--new` は既存ファイルを上書きしない。同名があればファイル名に `-2`、`-3` を付ける。詳細な入出力は `"$NOTES_CLI" note write --help` で確認する。
+
+### 5. 作成後の報告
 
 作成したメモの絶対パスとタイトルを伝え、repo-notes アプリで閲覧できることを添える。
 
@@ -101,7 +116,25 @@ ls -t "$NOTES_DIR"   # 新しい順に一覧（ファイル名の日付とtitle�
 - メモは書かれた時点のスナップショット。**ファイルパス・コード片・結論は現在のコードと突き合わせて検証**してから使う
 - 作業の結果、メモの内容が古くなったら更新を提案する
 
-### 3. メモを再編集する場合
+### 3. メモの再編集
+
+保存元のスナップショットを先に読み、その内容を基に別の下書きを作る。
+
+```bash
+REPO_KEY=$(basename "$(dirname "$NOTES_DIR")")
+NOTES_CLI="$HOME/.claude/skills/repo-notes/bin/repo-notes"
+NOTE_WORK=$(mktemp -d)
+"$NOTES_CLI" note read --repo-key "$REPO_KEY" --file-name "YYYY-MM-DD-topic.md" --output raw > "$NOTE_WORK/snapshot.md"
+cp "$NOTE_WORK/snapshot.md" "$NOTE_WORK/draft.md"
+```
+
+`snapshot.md` を Read し、`draft.md` に編集結果を作る。読み込みが失敗した場合は編集・保存へ進まない。保存時は元のスナップショットを渡す。
+
+```bash
+"$NOTES_CLI" note write --repo-key "$REPO_KEY" --file-name "YYYY-MM-DD-topic.md" --expected-file "$NOTE_WORK/snapshot.md" --content-file "$NOTE_WORK/draft.md"
+```
+
+終了コード3は、保存元と現在のファイルが異なる競合。下書きとスナップショットを保持して最新を読み、採用する変更をユーザーに確認する。元のスナップショットを差し替えるだけで下書きを強制保存しない。
 
 - frontmatter（`title` / `created` / `tags`）の形式を維持する。`created` は変更しない
 - メモは追記ログではなく「現在の理解を表す文書」。古い記述は残さず本文を書き換える

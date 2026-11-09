@@ -17,6 +17,7 @@ interface Props {
 export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
   const [content, setContent] = useState(initialContent);
   const [savedContent, setSavedContent] = useState(initialContent);
+  const [confirmingReload, setConfirmingReload] = useState(false);
   const dirty = content !== savedContent;
   const queryClient = useQueryClient();
 
@@ -35,6 +36,7 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
     onSuccess: (note) => {
       setContent(note.raw);
       setSavedContent(note.raw);
+      setConfirmingReload(false);
       save.reset();
     },
   });
@@ -82,11 +84,15 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
         )}
         {save.data?.cleanupWarnings.map((warning) => <span className="editor-status error" key={warning}>{warning}</span>)}
         {reload.isError && <span className="editor-status error">再読込に失敗しました。下書きは保持しています: {String(reload.error)}</span>}
-        {conflict && (
-          <button type="button" className="btn" disabled={reload.isPending} onClick={() => {
-            if (window.confirm("編集中の下書きを破棄し、ファイルの最新内容を読み込みますか？")) reload.mutate();
-          }}>下書きを破棄して最新を読込</button>
-        )}
+        {conflict && (confirmingReload ? (
+          <>
+            <span className="editor-status error">下書きを破棄して最新内容を読み込みます。</span>
+            <button type="button" className="btn danger" disabled={reload.isPending} onClick={() => reload.mutate()}>破棄して読込</button>
+            <button type="button" className="btn" disabled={reload.isPending} onClick={() => setConfirmingReload(false)}>取消</button>
+          </>
+        ) : (
+          <button type="button" className="btn" onClick={() => setConfirmingReload(true)}>下書きを破棄して最新を読込</button>
+        ))}
         <button
           type="button"
           className="btn primary"

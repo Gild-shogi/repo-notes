@@ -92,6 +92,20 @@ pnpm test:skill                                    # repo-key導出のshellテ�
 make install-skill    # ~/.claude/skills/repo-notes と ~/.agents/skills/repo-notes にコピー
 ```
 
+`install-skill` は実行内容を表示して `yes` を1回確認した後、既存アプリバイナリをビルドしてスキルの `bin/repo-notes` に同梱する。CIでは `make YES=1 install-skill` を使う。ビルド済み成果物を配る場合は `BUILD_CLI=true APP_BINARY=/path/to/repo-notes` を指定できる。macOSの配布経路を対象とし、WindowsのGUI subsystemを持つバイナリのコンソール対応は別途扱う。
+
+共通設定をrulesyncで管理する場合、直接インストールしたスキルは `rulesync import --targets claudecode --global --features skills` でソースへ取り込み、`~/claude-dotfiles/` と `setup.sh` による同期を維持する。
+
+## 保存競合の扱い
+
+アプリは編集開始時のraw内容を保存元として送り、現在のファイルと異なる場合は保存を拒否する。下書きは画面に残り、破棄と再読込は利用者が明示して行う。保存中の追加入力も未保存として保持する。
+
+エージェントも同じアプリバイナリのheadless `note read/write` を使う。GUIは初期化せず、readのraw出力は改行を加えない。再編集はスナップショットと下書きを別ファイルに保持し、`--expected-file` と `--content-file` を渡す。新規作成は `--new`、事前確認は `--dry-run`、詳細は `repo-notes note write --help` を参照する。競合は終了コード3で通知し、強制上書き・自動マージは行わない。
+
+保存に参加する全mutatorは、保存先の永続lockfileでプロセス間排他を取り、版比較から同じディレクトリでの原子的な公開までを一緒に行う。lockfile自体は削除・置換しない。pinsも同じ排他と原子的保存を使う。公開前の一時ファイルは同期するが、rename後のディレクトリ同期による電源断耐性までは保証しない。
+
+排他を使わない外部エディタ等も、次の保存時のraw比較で既存更新を検出する。ただし比較後から公開までに非参加writerが書き込む競合や、保存先・lockfileを非参加プロセスが入れ替える操作は排他の保証外となる。アプリとエージェントの双方が同じ保存先と保存方法を使う必要がある。
+
 ### デバッグ
 
 - **ブラウザ単体モード**: `pnpm dev` で起動した vite（http://localhost:1420）をブラウザで直接開くと、Tauri APIモック（`src/lib/devMock.ts`、devビルド限定）によりフィクスチャデータでUIを確認できる。レイアウト・Markdown・Mermaid・編集フローの確認に使う。画像・HTMLノートのiframeはasset protocolが無いため表示されない
