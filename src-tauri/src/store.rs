@@ -477,21 +477,21 @@ pub fn delete_note(root: &DataRoot, repo_key: &str, file_name: &str) -> Result<(
         return Err(format!("ノートが存在しません: {file_name}"));
     }
     let pins = load_pins(root, repo_key)?;
-    // ノート専用のアセットディレクトリがあれば一緒に削除
-    let assets = path
-        .parent()
-        .map(|p| p.join("assets").join(file_stem(file_name)));
-    if let Some(assets) = assets {
-        match root.dir.metadata(&assets) {
-            Ok(metadata) if metadata.is_dir() => {
-                root.dir.remove_dir_all(&assets).map_err(storage_error)?
+    let assets = match path.parent() {
+        Some(parent) => {
+            let assets = parent.join("assets").join(file_stem(file_name));
+            match root.dir.open_dir(&assets) {
+                Ok(_) => Some(assets),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+                Err(e) => return Err(storage_error(e)),
             }
-            Ok(_) => return Err("アセットの保存先がディレクトリではありません".into()),
-            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-            Err(e) => return Err(storage_error(e)),
         }
-    }
+        None => None,
+    };
     root.dir.remove_file(&path).map_err(storage_error)?;
+    if let Some(assets) = assets {
+        root.dir.remove_dir_all(&assets).map_err(storage_error)?;
+    }
     write_pins_file(root, &pins_path(repo_key), pins, file_name, false)?;
     Ok(())
 }
@@ -615,6 +615,29 @@ mod tests {
                 .unwrap(),
             b"image data"
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn failed_note_removal_preserves_assets() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let notes = tmp.path().join("repos").join(key).join("notes");
+        let assets = notes.join("assets/a");
+        fs::create_dir_all(&assets).unwrap();
+        fs::write(notes.join("a.md"), "note").unwrap();
+        fs::write(assets.join("image.png"), "image data").unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+        fs::set_permissions(&notes, fs::Permissions::from_mode(0o555)).unwrap();
+
+        let result = delete_note(&root, key, "a.md");
+        fs::set_permissions(&notes, fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(result.is_err());
+        assert_eq!(read_note(&root, key, "a.md").unwrap().raw, "note");
+        assert_eq!(fs::read(assets.join("image.png")).unwrap(), b"image data");
     }
 
     #[test]
