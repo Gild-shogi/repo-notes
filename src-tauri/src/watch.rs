@@ -9,7 +9,6 @@ use tauri::{AppHandle, Emitter};
 pub const CHANGED_EVENT: &str = "repo-notes://changed";
 
 /// データルートを監視し、変更があったリポジトリのキーをフロントへ通知する。
-/// データルートが未作成の場合は作成されるまで待ってから監視を開始する。
 pub fn spawn(app: AppHandle, root: PathBuf) {
     std::thread::spawn(move || {
         let (tx, rx) = std::sync::mpsc::channel();
@@ -25,7 +24,7 @@ pub fn spawn(app: AppHandle, root: PathBuf) {
             return;
         }
 
-        // 監視開始前（ルート作成待ちの間）の変更を拾うため、初回に一度通知する
+        // 起動時の一覧取得から監視開始までの変更を拾う。
         emit_changed(&app, HashSet::new());
 
         for result in rx {
