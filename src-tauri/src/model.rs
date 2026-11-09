@@ -78,3 +78,22 @@ pub struct NoteContent {
 pub struct DeleteOutcome {
     pub cleanup_warnings: Vec<String>,
 }
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveOutcome {
+    pub cleanup_warnings: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "kind", content = "message", rename_all = "camelCase")]
+pub enum SaveError {
+    Conflict,
+    Failure(String),
+}
+
+impl From<String> for SaveError {
+    fn from(message: String) -> Self {
+        Self::Failure(message)
+    }
+}

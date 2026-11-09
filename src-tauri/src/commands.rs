@@ -1,4 +1,4 @@
-use crate::model::{DeleteOutcome, NoteContent, NoteSummary, RepoSummary};
+use crate::model::{DeleteOutcome, NoteContent, NoteSummary, RepoSummary, SaveError, SaveOutcome};
 use crate::store;
 use crate::store::StoreState;
 use tauri::State;
@@ -56,8 +56,9 @@ pub fn write_note(
     repo_key: String,
     file_name: String,
     content: String,
-) -> Result<(), String> {
-    store::write_note(state.get()?, &repo_key, &file_name, &content)
+    expected_raw: String,
+) -> Result<SaveOutcome, SaveError> {
+    store::write_note(state.get()?, &repo_key, &file_name, &content, &expected_raw)
 }
 
 #[tauri::command]
