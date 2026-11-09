@@ -68,11 +68,12 @@ agent: claude-code
 
 ### 3-b. HTMLメモ（ビジュアライズ専用）
 
-Mermaidで表現できないカスタム可視化（インタラクティブなグラフ、フィルタUI、タイムライン、大量データの表等）に限りHTMLで書く。ユーザーはHTMLメモを編集しない前提。
+Mermaidで表現できない静的なカスタム図、タイムライン、大量データの表等に限りHTMLで書く。ユーザーはHTMLメモを編集しない前提。
 
 規約:
 - 拡張子は `.html`、命名規則はMDと同じ
-- **単一ファイル自己完結**。CDN読み込み・外部fetch・外部フォントは禁止（sandbox付きiframeで表示され、外部通信はブロックされる）。JS/CSSはすべてインラインで書く
+- **単一ファイル自己完結の静的HTML**。CSSはインライン、画像はdata URIで埋め込む。ビューアはJavaScriptの実行と外部通信を禁止するため、スクリプトや外部リソースに依存しない内容にする
+- 図・表の内容をHTML/CSSで直接表現する。script・link・meta・base・子フレームや、リンク・フォーム送信先の属性は表示時に除去される
 - 先頭にメタデータコメントを必ず入れる:
 
 ```html
@@ -138,7 +139,7 @@ cp "$NOTE_WORK/snapshot.md" "$NOTE_WORK/draft.md"
 
 - frontmatter（`title` / `created` / `tags`）の形式を維持する。`created` は変更しない
 - メモは追記ログではなく「現在の理解を表す文書」。古い記述は残さず本文を書き換える
-- HTMLメモの編集時も自己完結・CDN禁止の規約を守る
+- HTMLメモの編集時も静的HTML・インラインCSS・data画像の規約を守る
 
 ## 判断基準まとめ
 
@@ -147,4 +148,4 @@ cp "$NOTE_WORK/snapshot.md" "$NOTE_WORK/draft.md"
 | 解説・調査結果・手順・所感 | Markdown |
 | フロー図・シーケンス図・ER図・状態遷移図 | Markdown + Mermaid |
 | スクリーンショット・既存画像の添付 | Markdown + assets/ |
-| インタラクティブ可視化・カスタム図 | HTML（自己完結） |
+| 静的なカスタム図・タイムライン・大量データの表 | HTML（自己完結・JavaScriptなし） |

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import DOMPurify from "dompurify";
 import { deleteNote, openNote, printView, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
 import { extractToc } from "../lib/toc";
@@ -19,6 +19,11 @@ import {
 import { MarkdownView } from "./MarkdownView";
 import { NoteEditor } from "./NoteEditor";
 import { Toc } from "./Toc";
+
+const STATIC_HTML_PREFIX =
+  '<!doctype html><meta http-equiv="Content-Security-Policy" content="' +
+  "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; " +
+  "img-src data:; base-uri 'none'; form-action 'none'\">";
 
 interface Props {
   repoKey: string;
@@ -224,12 +229,36 @@ export function NoteView({
           </>
         )
       ) : (
-        // allow-same-origin を付けないことで opaque origin となり、
-        // ノート内JSから親DOM・Tauri IPCへは到達できない
+        // WebKitのpreconnectはCSPを通らないため、接続ヒントを除いた文書を表示する。
         <iframe
           className="html-note-frame"
-          src={convertFileSrc(note.absPath)}
-          sandbox="allow-scripts"
+          srcDoc={
+            STATIC_HTML_PREFIX +
+            DOMPurify.sanitize(note.raw, {
+              WHOLE_DOCUMENT: true,
+              FORBID_TAGS: [
+                "base",
+                "embed",
+                "frame",
+                "frameset",
+                "iframe",
+                "link",
+                "meta",
+                "object",
+                "script",
+              ],
+              FORBID_ATTR: [
+                "action",
+                "formaction",
+                "href",
+                "ping",
+                "srcdoc",
+                "srcset",
+                "xlink:href",
+              ],
+            })
+          }
+          sandbox=""
           title={note.meta.title ?? note.fileName}
         />
       )}
