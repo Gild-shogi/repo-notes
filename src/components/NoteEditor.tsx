@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { readNote, writeNote } from "../api";
 import type { SaveError, SaveOutcome } from "../types";
 import { editorExtensions } from "../lib/editorTheme";
+import { useNoteDraft } from "../lib/noteDrafts";
 
 interface Props {
   repoKey: string;
@@ -15,16 +16,22 @@ interface Props {
 }
 
 export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
-  const [content, setContent] = useState(initialContent);
-  const [savedContent, setSavedContent] = useState(initialContent);
+  const [draft, updateDraft] = useNoteDraft(repoKey, fileName, initialContent);
+  const { content, expectedRaw: savedContent, operation } = draft;
   const [confirmingReload, setConfirmingReload] = useState(false);
   const dirty = content !== savedContent;
+  const saving = operation.kind === "saving";
+  const reloading = operation.kind === "reloading";
+  const saveError = operation.kind === "save-error" ? operation.error : null;
+  const conflict = saveError?.kind === "conflict" || operation.kind === "reload-error" || reloading;
   const queryClient = useQueryClient();
 
   const save = useMutation<SaveOutcome, SaveError, { content: string; expectedRaw: string }>({
     mutationFn: (input) => writeNote(repoKey, fileName, input.content, input.expectedRaw),
-    onSuccess: (_, input) => {
-      setSavedContent(input.content);
+    onMutate: () => updateDraft((current) => ({ ...current, operation: { kind: "saving" } })),
+    onError: (error) => updateDraft((current) => ({ ...current, operation: { kind: "save-error", error } })),
+    onSuccess: (outcome, input) => {
+      updateDraft((current) => ({ ...current, expectedRaw: input.content, operation: { kind: "idle" }, cleanupWarnings: outcome.cleanupWarnings }));
       queryClient.invalidateQueries({ queryKey: ["note", repoKey, fileName] });
       queryClient.invalidateQueries({ queryKey: ["notes", repoKey] });
       queryClient.invalidateQueries({ queryKey: ["repos"] });
@@ -33,19 +40,18 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
 
   const reload = useMutation({
     mutationFn: () => readNote(repoKey, fileName),
+    onMutate: () => updateDraft((current) => ({ ...current, operation: { kind: "reloading" } })),
+    onError: (error) => updateDraft((current) => ({ ...current, operation: { kind: "reload-error", message: String(error) } })),
     onSuccess: (note) => {
-      setContent(note.raw);
-      setSavedContent(note.raw);
+      updateDraft(() => ({ content: note.raw, expectedRaw: note.raw, operation: { kind: "idle" }, cleanupWarnings: [] }));
       setConfirmingReload(false);
-      save.reset();
     },
   });
-  const conflict = save.error?.kind === "conflict";
 
-  const { isPending, mutate } = save;
+  const { mutate } = save;
   const saveContent = useCallback((value: string) => {
-    if (!isPending && !reload.isPending && !conflict) mutate({ content: value, expectedRaw: savedContent });
-  }, [isPending, mutate, reload.isPending, conflict, savedContent]);
+    if (!saving && !reloading && !conflict) mutate({ content: value, expectedRaw: savedContent });
+  }, [saving, mutate, reloading, conflict, savedContent]);
 
   const extensions = useMemo(
     () => [
@@ -69,26 +75,26 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
     <div className="note-editor">
       <div className="editor-toolbar">
         <span className={`editor-status ${dirty ? "dirty" : ""}`}>
-          {save.isPending
+          {saving
             ? "保存中…"
             : dirty
               ? "未保存の変更あり"
               : "保存済み"}
         </span>
-        {save.isError && (
+        {saveError && (
           <span className="editor-status error">
             {conflict
               ? "別の書き込みで更新されています。保存を拒否し、下書きを保持しました。必要な内容を控えてから最新を読み込んでください。"
-              : `保存に失敗しました: ${save.error?.kind === "failure" ? save.error.message : String(save.error)}`}
+              : `保存に失敗しました: ${saveError.kind === "failure" ? saveError.message : String(saveError)}`}
           </span>
         )}
-        {save.data?.cleanupWarnings.map((warning) => <span className="editor-status error" key={warning}>{warning}</span>)}
-        {reload.isError && <span className="editor-status error">再読込に失敗しました。下書きは保持しています: {String(reload.error)}</span>}
+        {draft.cleanupWarnings.map((warning) => <span className="editor-status error" key={warning}>{warning}</span>)}
+        {operation.kind === "reload-error" && <span className="editor-status error">再読込に失敗しました。下書きは保持しています: {operation.message}</span>}
         {conflict && (confirmingReload ? (
           <>
             <span className="editor-status error">下書きを破棄して最新内容を読み込みます。</span>
-            <button type="button" className="btn danger" disabled={reload.isPending} onClick={() => reload.mutate()}>破棄して読込</button>
-            <button type="button" className="btn" disabled={reload.isPending} onClick={() => setConfirmingReload(false)}>取消</button>
+            <button type="button" className="btn danger" disabled={reloading} onClick={() => reload.mutate()}>破棄して読込</button>
+            <button type="button" className="btn" disabled={reloading} onClick={() => setConfirmingReload(false)}>取消</button>
           </>
         ) : (
           <button type="button" className="btn" onClick={() => setConfirmingReload(true)}>下書きを破棄して最新を読込</button>
@@ -96,7 +102,7 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
         <button
           type="button"
           className="btn primary"
-          disabled={!dirty || save.isPending || reload.isPending || conflict}
+          disabled={!dirty || saving || reloading || conflict}
           onClick={() => saveContent(content)}
         >
           保存 (⌘S)
@@ -104,10 +110,10 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
       </div>
       <CodeMirror
         value={content}
-        editable={!reload.isPending}
+        editable={!reloading}
         extensions={extensions}
         onChange={(value) => {
-          setContent(value);
+          updateDraft((current) => ({ ...current, content: value }));
         }}
         onBlur={() => {
           if (dirty) saveContent(content);
