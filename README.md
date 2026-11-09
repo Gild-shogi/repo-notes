@@ -17,6 +17,8 @@ Gitリポジトリ単位で管理する、AIエージェント用キャッチア
 
 未作成の一覧・pins は空として扱い、I/O 障害や JSON 破損は画面にエラーを表示する。破損した pins をピン操作で初期化・上書きしない。アセットはアプリ独自の `asset` protocol から同じ保存先の handle で読み込む。設定の asset scope は空で、標準ハンドラーによる別の読み込み経路は許可しない。
 
+ノート本体を削除できなかった場合は削除失敗を返す。本体の削除後にアセットやピン情報の後処理だけが失敗した場合は、ノートを閉じて後処理の警告を表示する。警告は別のノートを選ぶか、警告の「閉じる」で解除できる。
+
 ```
 ~/.repo-notes/
 └── repos/<repo-key>/
@@ -80,6 +82,7 @@ make release          # 起動中アプリを終了 → ビルド → /Applicati
 ```bash
 cargo test --manifest-path src-tauri/Cargo.toml   # Rust（パーサ・パス検証）
 pnpm test                                          # vitest（URL書き換え）
+pnpm lint                                          # React Hooks recommended
 pnpm test:skill                                    # repo-key導出のshellテスト
 ```
 
