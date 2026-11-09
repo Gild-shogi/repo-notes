@@ -65,7 +65,10 @@ mod tests {
         fs::write(outside.path().join("secret.svg"), "secret").unwrap();
         let linked = tmp.path().join("linked.svg");
         std::os::unix::fs::symlink(outside.path().join("secret.svg"), &linked).unwrap();
-        assert_eq!(response(&root, request(&root.path().join("linked.svg"))).status(), 403);
+        assert_eq!(
+            response(&root, request(&root.path().join("linked.svg"))).status(),
+            403
+        );
         assert_eq!(
             response(&root, request(&outside.path().join("secret.svg"))).status(),
             403

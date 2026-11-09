@@ -104,6 +104,12 @@ pub fn note_external_path(
         return Err("ノートが通常ファイルではありません".into());
     }
     let relative = root.dir.canonicalize(relative).map_err(storage_error)?;
+    note_kind(
+        relative
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("ノートのファイル名が不正です")?,
+    )?;
     Ok(root.path.join(relative))
 }
 
@@ -633,6 +639,19 @@ mod tests {
         .unwrap();
         let root = DataRoot::open(tmp.path()).unwrap();
         assert!(root.read(Path::new("linked/private.md")).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn external_editor_rejects_executable_targets_disguised_as_notes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let notes = tmp.path().join("repos").join(key).join("notes");
+        fs::write(notes.join("evil.command"), "executable").unwrap();
+        std::os::unix::fs::symlink("evil.command", notes.join("alias.md")).unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+        assert!(note_external_path(&root, key, "alias.md").is_err());
     }
 
     #[test]
