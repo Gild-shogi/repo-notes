@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use cap_std::fs::{Dir, OpenOptions};
 
-use crate::model::{NoteContent, NoteKind, NoteMeta, NoteSummary, RepoMeta, RepoSummary};
+use crate::model::{DeleteOutcome, NoteContent, NoteKind, NoteMeta, NoteSummary, RepoMeta, RepoSummary};
 use crate::parse;
 
 pub fn data_root() -> PathBuf {
@@ -471,7 +471,7 @@ fn slugify(title: &str) -> String {
     }
 }
 
-pub fn delete_note(root: &DataRoot, repo_key: &str, file_name: &str) -> Result<(), String> {
+pub fn delete_note(root: &DataRoot, repo_key: &str, file_name: &str) -> Result<DeleteOutcome, String> {
     let path = note_path(root, repo_key, file_name)?;
     if !root.dir.metadata(&path).map_err(storage_error)?.is_file() {
         return Err(format!("ノートが存在しません: {file_name}"));
@@ -489,11 +489,16 @@ pub fn delete_note(root: &DataRoot, repo_key: &str, file_name: &str) -> Result<(
         None => None,
     };
     root.dir.remove_file(&path).map_err(storage_error)?;
+    let mut cleanup_warnings = Vec::new();
     if let Some(assets) = assets {
-        root.dir.remove_dir_all(&assets).map_err(storage_error)?;
+        if let Err(error) = root.dir.remove_dir_all(&assets) {
+            cleanup_warnings.push(format!("アセットの削除に失敗しました: {error}"));
+        }
     }
-    write_pins_file(root, &pins_path(repo_key), pins, file_name, false)?;
-    Ok(())
+    if let Err(error) = write_pins_file(root, &pins_path(repo_key), pins, file_name, false) {
+        cleanup_warnings.push(error);
+    }
+    Ok(DeleteOutcome { cleanup_warnings })
 }
 
 #[cfg(test)]
@@ -638,6 +643,33 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(read_note(&root, key, "a.md").unwrap().raw, "note");
         assert_eq!(fs::read(assets.join("image.png")).unwrap(), b"image data");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn pin_cleanup_failure_does_not_report_deleted_note_as_failure() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let key = "demo--12345678";
+        setup_repo(tmp.path(), key);
+        let repo = tmp.path().join("repos").join(key);
+        fs::write(repo.join("notes/a.md"), "note").unwrap();
+        fs::write(repo.join("pins.json"), r#"{"pinned":["a.md"]}"#).unwrap();
+        fs::set_permissions(repo.join("pins.json"), fs::Permissions::from_mode(0o444))
+            .unwrap();
+        let root = DataRoot::open(tmp.path()).unwrap();
+
+        let result = delete_note(&root, key, "a.md");
+        assert!(read_note(&root, key, "a.md").is_err());
+        assert!(result.is_ok(), "削除済みのノートを失敗扱いしない: {result:?}");
+        let outcome = result.unwrap();
+        assert_eq!(outcome.cleanup_warnings.len(), 1);
+        assert!(outcome.cleanup_warnings[0].contains("ピン状態の保存に失敗"));
+        assert_eq!(
+            fs::read_to_string(repo.join("pins.json")).unwrap(),
+            r#"{"pinned":["a.md"]}"#
+        );
     }
 
     #[test]

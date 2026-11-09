@@ -1,4 +1,4 @@
-use crate::model::{NoteContent, NoteSummary, RepoSummary};
+use crate::model::{DeleteOutcome, NoteContent, NoteSummary, RepoSummary};
 use crate::store;
 use crate::store::StoreState;
 use tauri::State;
@@ -74,7 +74,7 @@ pub fn delete_note(
     state: State<StoreState>,
     repo_key: String,
     file_name: String,
-) -> Result<(), String> {
+) -> Result<DeleteOutcome, String> {
     store::delete_note(state.get()?, &repo_key, &file_name)
 }
 

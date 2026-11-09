@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { NoteContent, NoteSummary, RepoSummary } from "./types";
+import type { DeleteOutcome, NoteContent, NoteSummary, RepoSummary } from "./types";
 
 export const getDataRoot = () => invoke<string>("get_data_root");
 
@@ -31,7 +31,7 @@ export const createNote = (repoKey: string, title: string) =>
   invoke<string>("create_note", { repoKey, title });
 
 export const deleteNote = (repoKey: string, fileName: string) =>
-  invoke<void>("delete_note", { repoKey, fileName });
+  invoke<DeleteOutcome>("delete_note", { repoKey, fileName });
 
 /** ネイティブ印刷ダイアログを開く（PDF保存もここから可能） */
 export const printView = () => invoke<void>("print_view");
