@@ -1,23 +1,28 @@
 use std::path::{Path, PathBuf};
 
-use crate::store::{self, StoreState};
+use crate::{commands, store};
 use tauri_plugin_opener::OpenerExt;
 
 #[tauri::command]
-pub fn open_note(
+pub async fn open_note(
     app: tauri::AppHandle,
-    state: tauri::State<StoreState>,
     repo_key: String,
     file_name: String,
     reveal: bool,
 ) -> Result<(), String> {
-    let path = store::note_external_path(state.get()?, &repo_key, &file_name)?;
-    if reveal {
-        app.opener().reveal_item_in_dir(path)
-    } else {
-        app.opener().open_path(path.to_string_lossy(), None::<&str>)
-    }
-    .map_err(|error| format!("ノートを外部アプリで開けません: {error}"))
+    let opener = app.clone();
+    commands::store_io(app, move |root| {
+        let path = store::note_external_path(root, &repo_key, &file_name)?;
+        if reveal {
+            opener.opener().reveal_item_in_dir(path)
+        } else {
+            opener
+                .opener()
+                .open_path(path.to_string_lossy(), None::<&str>)
+        }
+        .map_err(|error| format!("ノートを外部アプリで開けません: {error}"))
+    })
+    .await
 }
 
 /// 実行系のファイルはノート内リンクから開かせない（openで即実行され得るもの）
@@ -63,12 +68,15 @@ pub fn validate_openable(path: &str, home: &Path) -> Result<PathBuf, String> {
 
 /// ノート内リンクのローカルパスを、検証した上でデフォルトアプリで開く。
 #[tauri::command]
-pub fn open_local_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
-    let home = dirs::home_dir().ok_or("ホームディレクトリが見つかりません")?;
-    let canonical = validate_openable(&path, &home)?;
-    app.opener()
-        .open_path(canonical.to_string_lossy(), None::<&str>)
-        .map_err(|e| format!("ファイルを開けませんでした: {e}"))
+pub async fn open_local_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    commands::blocking(move || {
+        let home = dirs::home_dir().ok_or("ホームディレクトリが見つかりません")?;
+        let canonical = validate_openable(&path, &home)?;
+        app.opener()
+            .open_path(canonical.to_string_lossy(), None::<&str>)
+            .map_err(|e| format!("ファイルを開けませんでした: {e}"))
+    })
+    .await
 }
 
 #[cfg(test)]
