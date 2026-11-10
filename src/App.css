@@ -721,3 +721,16 @@ body {
   background: #fff;
   min-height: 0;
 }
+
+.app-shell { height: 100vh; display: flex; flex-direction: column; }
+.app-shell > .layout { flex: 1; height: auto; min-height: 0; }
+.connection-panel { flex: 0 0 auto; max-height: 48vh; overflow-y: auto; background: var(--bg-sub); border-bottom: 1px solid var(--border); }
+.connection-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 14px; }
+.connection-bar > span { overflow-wrap: anywhere; }
+.connection-message { margin: 4px 14px 10px; }
+.connection-settings { padding: 4px 14px 14px; max-width: 850px; }
+.connection-settings h2 { font-size: 15px; margin: 4px 0 10px; }
+.connection-settings label { display: grid; grid-template-columns: 170px 1fr; align-items: center; gap: 10px; margin: 8px 0; }
+.connection-settings input { padding: 5px 8px; min-width: 0; border: 1px solid var(--border); border-radius: 4px; font: inherit; }
+.connection-settings p { color: var(--text-sub); font-size: 12px; }
+.connection-actions { display: flex; gap: 8px; margin-top: 12px; }

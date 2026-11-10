@@ -7,12 +7,15 @@ import { NoteView } from "./components/NoteView";
 import { NewNoteButton } from "./components/NewNoteButton";
 import { SidePane } from "./components/SidePane";
 import { NoteIcon, RepoIcon } from "./components/icons";
+import { ConnectionPanel } from "./components/ConnectionPanel";
+import { ConnectionProvider, useConnection } from "./lib/connection";
 import { useLiveUpdates } from "./lib/useLiveUpdates";
 import "./App.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 5_000, retry: 1 },
+    queries: { staleTime: 5_000, retry: 1, networkMode: "always" },
+    mutations: { retry: false, networkMode: "always" },
   },
 });
 
@@ -31,6 +34,8 @@ function usePaneOpen(key: string): [boolean, () => void] {
 
 function Main() {
   useLiveUpdates();
+  const { targetRevision } = useConnection();
+  const [seenRevision, setSeenRevision] = useState(targetRevision);
   const [selectedRepoKey, setSelectedRepoKey] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [justCreatedFile, setJustCreatedFile] = useState<string | null>(null);
@@ -38,6 +43,14 @@ function Main() {
   const [repoPaneOpen, toggleRepoPane] = usePaneOpen("repos");
   const [notePaneOpen, toggleNotePane] = usePaneOpen("notes");
   const contentPaneRef = useRef<HTMLElement | null>(null);
+
+  if (seenRevision !== targetRevision) {
+    setSeenRevision(targetRevision);
+    setSelectedRepoKey(null);
+    setSelectedFileName(null);
+    setJustCreatedFile(null);
+    setDeleteWarnings([]);
+  }
 
   const selectRepo = (repoKey: string) => {
     setSelectedRepoKey(repoKey);
@@ -135,7 +148,9 @@ function Main() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Main />
+      <ConnectionProvider>
+        <div className="app-shell"><ConnectionPanel /><Main /></div>
+      </ConnectionProvider>
     </QueryClientProvider>
   );
 }
