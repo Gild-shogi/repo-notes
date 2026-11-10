@@ -1,3 +1,5 @@
+#![cfg(any(feature = "desktop", feature = "backend"))]
+
 use std::{
     fs,
     path::Path,
