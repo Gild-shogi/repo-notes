@@ -69,6 +69,8 @@ agent: claude-code                  # 任意
 
 ## インストーラーの配布
 
+導入・接続・復旧と確認済みの範囲は [インストーラーの利用手順](docs/installation.md) を参照する。
+
 `v<package.json の version>` タグを起点に `Installer builds` が動く。`package.json`、Cargo package、Tauri config、同梱 backend の版と protocol を照合し、WSL backend・macOS DMG・Windows NSIS の全ビルドが成功してから同じ GitHub Release へ添付する。PR では同じビルドを行って Actions artifact に保存し、Release は作らない。
 
 | ビルド対象 | 成果物 | 実行時の構成 |
