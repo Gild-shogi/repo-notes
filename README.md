@@ -86,6 +86,31 @@ pnpm lint                                          # React Hooks recommended
 pnpm test:skill                                    # repo-key導出のshellテスト
 ```
 
+### WSL バックエンド
+
+GUI ライブラリを使わないバックエンドは、同じ Rust crate の `desktop` feature を外してビルドする。Windows の接続・配置 UI とインストーラーは後続作業で、現段階では手動の開発用コマンドを提供する。
+
+```bash
+cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --bin repo-notes-backend
+cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features
+src-tauri/target/debug/repo-notes-backend --help
+src-tauri/target/debug/repo-notes-backend --stdio
+```
+
+`--stdio` は1行1メッセージの JSON 接続。最初に `hello` を送り、UI とバックエンドのアプリ版・プロトコル版が一致した後に操作を受け付ける。不一致なら保存先を開く前に拒否して接続を終了する。`dataRoot` は接続ごとに固定し、省略時は既存の `REPO_NOTES_DIR` または Linux home の `.repo-notes` を使う。シェルの profile は実行しない。
+
+```json
+{"id":1,"method":"hello","appVersion":"0.1.0","protocolVersion":1,"dataRoot":"/tmp/repo-notes-fixture"}
+{"id":2,"method":"list_repos"}
+{"id":3,"method":"shutdown"}
+```
+
+正常応答は `{"type":"response","id":2,"result":...}`、失敗は同じ `id` と `error.kind` を返す。ノートの引数と結果は既存の Tauri コマンドと共通で、引数のキーは `repoKey`・`fileName`・`expectedRaw` などの camelCase。`read_asset` は検証済みアセットの HTTP status・headers・base64 body を返し、Windows 側で WebView の配信応答へ戻す。変更通知は `{"type":"event","event":"changed","repoKeys":[...]}`、監視障害は `event:"watch_error"` と `message` で通知する。初期化時の空 `repoKeys` は全一覧の再取得を表す。
+
+stdout は応答とイベント専用、診断は stderr に出力する。要求の形式不正は `invalidRequest` を返して接続を終了する。保存競合は既存の `conflict`、I/O 失敗は `failure` で通知し、接続は維持する。標準入力の EOF または `shutdown` で所有するバックエンドと監視を終了し、WSL 全体や他のプロセスを停止しない。結果不明の保存は呼び出し側で自動再送しない。
+
+既存の `note read/write` も `repo-notes-backend` から利用でき、GUI と同じ保存元比較・排他・原子的保存を使う。接続の wire 型は `src-tauri/src/backend.rs` に置き、保存処理をプロトコルへ複製しない。新規ノートのファイル日付と `created` はバックエンドが動く端末の時刻設定に従う。WSL は通常 Windows のタイムゾーンに追従するが、同期設定やプロセスの `TZ` 上書きによって異なる。
+
 ### スキルのインストール
 
 ```bash

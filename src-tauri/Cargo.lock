@@ -3024,9 +3024,11 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 name = "repo-notes"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "cap-std",
  "chrono",
  "dirs",
+ "http",
  "notify",
  "notify-debouncer-full",
  "percent-encoding",
@@ -3037,6 +3039,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-clipboard-manager",
  "tauri-plugin-opener",
+ "tauri-utils",
  "tempfile",
 ]
 
