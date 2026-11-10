@@ -128,5 +128,5 @@ pub fn print_view(webview_window: tauri::WebviewWindow) -> Result<(), String> {
 
 #[tauri::command]
 pub fn get_connection() -> serde_json::Value {
-    serde_json::json!({"platform":"local","state":"connected","config":null,"dataRoot":null,"message":null,"externalAvailable":true,"connectionId":0,"distributions":[]})
+    serde_json::json!({"platform":"local","state":"connected","config":null,"dataRoot":null,"home":null,"revision":0,"message":null,"externalAvailable":true,"connectionId":0,"distributions":[]})
 }

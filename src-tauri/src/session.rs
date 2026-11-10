@@ -125,6 +125,13 @@ impl Session {
         })
     }
 
+    pub fn disconnected_message(&self) -> Option<String> {
+        self.disconnected
+            .lock()
+            .map(|message| message.clone())
+            .unwrap_or_else(|e| Some(e.to_string()))
+    }
+
     pub fn request(&mut self, operation: Operation) -> Result<Value, Failure> {
         if let Some(message) = self
             .disconnected

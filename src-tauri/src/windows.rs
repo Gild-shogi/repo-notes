@@ -57,6 +57,8 @@ pub struct View {
     pub state: &'static str,
     pub config: Option<Config>,
     pub data_root: Option<String>,
+    pub home: Option<String>,
+    pub revision: u64,
     pub message: Option<String>,
     pub external_available: bool,
     pub connection_id: u64,
@@ -83,7 +85,7 @@ struct Manifest {
 
 fn output_text(bytes: &[u8]) -> Result<String, String> {
     if bytes.contains(&0) {
-        if bytes.len() % 2 != 0 {
+        if !bytes.len().is_multiple_of(2) {
             return Err("WSLの一覧を読み取れません".into());
         }
         String::from_utf16(
@@ -277,6 +279,8 @@ impl Windows {
                 state: "disconnected",
                 config: loaded.ok().flatten(),
                 data_root: None,
+                home: None,
+                revision: 0,
                 message,
                 external_available: false,
                 connection_id: 0,
@@ -300,6 +304,7 @@ impl Windows {
         let view = {
             let mut view = self.view.lock().map_err(|e| e.to_string())?;
             change(&mut view);
+            view.revision += 1;
             view.clone()
         };
         app.emit(CONNECTION_EVENT, view).map_err(|e| e.to_string())
@@ -311,6 +316,7 @@ impl Windows {
             Ok(names) => view.distributions = names,
             Err(error) => view.message = Some(error),
         }
+        view.revision += 1;
         Ok(view.clone())
     }
     pub fn connect(&self, app: &tauri::AppHandle, config: Config) -> Result<View, String> {
@@ -365,13 +371,13 @@ impl Windows {
                     match notification {
                         Notification::Event(backend::Event::Changed { repo_keys }) => {
                             let _ = app_events.emit(
-                                "repo-notes://changed",
+                                crate::watch::CHANGED_EVENT,
                                 serde_json::json!({"repoKeys":repo_keys}),
                             );
                         }
                         Notification::Event(backend::Event::WatchError { message }) => {
                             let _ = app_events.emit(
-                                "repo-notes://watch-error",
+                                crate::watch::ERROR_EVENT,
                                 serde_json::json!({"message":message}),
                             );
                         }
@@ -410,15 +416,24 @@ impl Windows {
             }
             let external = execute(&config, false, &["id", "-un"])? == config.user;
             save_config(app, &config)?;
-            active.home = Some(home);
-            active.session = Some(session);
-            self.update(app, |view| {
+            let snapshot = {
+                let mut view = self.view.lock().map_err(|e| e.to_string())?;
+                if let Some(message) = session.disconnected_message() {
+                    return Err(message);
+                }
+                active.home = Some(home.clone());
+                active.session = Some(session);
                 view.state = "connected";
                 view.config = Some(config);
                 view.data_root = Some(expected_root);
+                view.home = Some(home);
                 view.external_available = external;
                 view.distributions = names;
-            })?;
+                view.revision += 1;
+                view.clone()
+            };
+            app.emit(CONNECTION_EVENT, snapshot)
+                .map_err(|e| e.to_string())?;
             self.view()
         })();
         if let Err(error) = &connected {
@@ -477,6 +492,9 @@ impl Windows {
             serde_json::from_value(self.request(app, id, operation).map_err(failure_message)?)
                 .map_err(|e| e.to_string())?;
         let view = self.view()?;
+        if id != Some(view.connection_id) || view.state != "connected" {
+            return Err("接続先が変更されたため外部操作を中止しました".into());
+        }
         if !view.external_available {
             return Err("外部操作はWSLの既定ユーザーで行われます。選択ユーザーと一致する接続設定を使ってください。アプリ内の編集は利用できます".into());
         }
@@ -512,7 +530,28 @@ impl Windows {
                 .collect::<Vec<_>>()
                 .join("/");
             let uri = format!("vscode-remote://wsl+{}{escaped}", config.distro);
-            let output = Command::new(editor)
+            let cli = editor
+                .parent()
+                .ok_or("VS Codeの場所が不正です")?
+                .join("resources/app/out/cli.js");
+            let extensions = Command::new(&editor)
+                .env("ELECTRON_RUN_AS_NODE", "1")
+                .creation_flags(0x08000000)
+                .arg(cli)
+                .arg("--list-extensions")
+                .stdin(Stdio::null())
+                .output()
+                .map_err(|e| format!("VS Codeの拡張を確認できません: {e}"))?;
+            if !extensions.status.success()
+                || !String::from_utf8_lossy(&extensions.stdout)
+                    .lines()
+                    .any(|extension| extension.trim() == "ms-vscode-remote.remote-wsl")
+            {
+                return Err(
+                    "VS CodeのWSL拡張 (ms-vscode-remote.remote-wsl) を導入してください".into(),
+                );
+            }
+            Command::new(editor)
                 .creation_flags(0x08000000)
                 .args([
                     "--remote",
@@ -521,15 +560,10 @@ impl Windows {
                     &uri,
                 ])
                 .stdin(Stdio::null())
-                .output()
-                .map_err(|e| {
-                    format!(
-                        "VS Codeを起動できません。Windows版VS CodeとWSL拡張を導入してください: {e}"
-                    )
-                })?;
-            if !output.status.success() {
-                return Err(format!("VS CodeのWSL接続を開始できません。Windows版VS CodeとWSL拡張を確認してください: {}{}",String::from_utf8_lossy(&output.stdout),String::from_utf8_lossy(&output.stderr)));
-            }
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .map_err(|e| format!("VS Codeを起動できません: {e}"))?;
             Ok(())
         }
     }
