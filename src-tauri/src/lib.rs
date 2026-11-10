@@ -42,32 +42,35 @@ pub fn run() {
         .setup(|app| {
             if let Ok(root) = app.state::<store::StoreState>().get() {
                 use tauri::Emitter;
+                let root = root.path().to_path_buf();
                 let handle = app.handle().clone();
-                let watcher = watch::spawn(root.path().to_path_buf(), move |event| {
-                    let result = match event {
-                        watch::Event::Changed { repo_keys } => handle.emit(
-                            watch::CHANGED_EVENT,
-                            serde_json::json!({"repoKeys":repo_keys}),
-                        ),
-                        watch::Event::WatchError { message } => {
-                            handle.emit(watch::ERROR_EVENT, serde_json::json!({"message":message}))
-                        }
-                    };
-                    if let Err(error) = result {
-                        eprintln!("変更イベントの送信に失敗: {error}");
-                    }
-                });
-                match watcher {
-                    Ok(watcher) => {
-                        app.manage(std::sync::Mutex::new(watcher));
-                        if let Err(error) =
-                            app.emit(watch::CHANGED_EVENT, serde_json::json!({"repoKeys":[]}))
-                        {
+                std::thread::spawn(move || {
+                    let notifications = handle.clone();
+                    let watcher = watch::spawn(root, move |event| {
+                        let result = match event {
+                            watch::Event::Changed { repo_keys } => notifications.emit(
+                                watch::CHANGED_EVENT,
+                                serde_json::json!({"repoKeys":repo_keys}),
+                            ),
+                            watch::Event::WatchError { message } => notifications
+                                .emit(watch::ERROR_EVENT, serde_json::json!({"message":message})),
+                        };
+                        if let Err(error) = result {
                             eprintln!("変更イベントの送信に失敗: {error}");
                         }
+                    });
+                    match watcher {
+                        Ok(watcher) => {
+                            handle.manage(std::sync::Mutex::new(watcher));
+                            if let Err(error) = handle
+                                .emit(watch::CHANGED_EVENT, serde_json::json!({"repoKeys":[]}))
+                            {
+                                eprintln!("変更イベントの送信に失敗: {error}");
+                            }
+                        }
+                        Err(error) => eprintln!("{error}"),
                     }
-                    Err(error) => eprintln!("{error}"),
-                }
+                });
             }
             Ok(())
         })
