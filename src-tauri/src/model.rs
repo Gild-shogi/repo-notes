@@ -36,7 +36,7 @@ pub struct NoteMeta {
     pub agent: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoSummary {
     pub repo_key: String,
@@ -47,7 +47,7 @@ pub struct RepoSummary {
     pub pinned: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteSummary {
     pub file_name: String,
@@ -59,7 +59,7 @@ pub struct NoteSummary {
     pub pinned: bool,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteContent {
     pub file_name: String,
@@ -73,19 +73,19 @@ pub struct NoteContent {
     pub updated_ms: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeleteOutcome {
     pub cleanup_warnings: Vec<String>,
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveOutcome {
     pub cleanup_warnings: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "message", rename_all = "camelCase")]
 pub enum SaveError {
     Conflict,
