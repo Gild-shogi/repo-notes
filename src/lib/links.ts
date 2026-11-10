@@ -19,7 +19,7 @@ function safeDecode(s: string): string {
   }
 }
 
-export function classifyLink(href: string, notesDirAbs: string): LinkAction {
+export function classifyLink(href: string, notesDirAbs: string, homeDir?: string | null): LinkAction {
   const trimmed = href.trim();
   if (!trimmed || trimmed.startsWith("#")) return { type: "blocked" };
   if (/^(https?|mailto):/i.test(trimmed)) return { type: "url", target: trimmed };
@@ -35,7 +35,7 @@ export function classifyLink(href: string, notesDirAbs: string): LinkAction {
   // どの形式でも `..` による遡りは禁止（最終検証はRust側でも行う）
   if (decoded.split("/").includes("..")) return { type: "blocked" };
   if (decoded.startsWith("~/")) {
-    const home = notesDirAbs.match(/^\/Users\/[^/]+/)?.[0];
+    const home = homeDir ?? notesDirAbs.match(/^\/Users\/[^/]+/)?.[0];
     if (!home) return { type: "blocked" };
     return { type: "path", target: home + decoded.slice(1) };
   }

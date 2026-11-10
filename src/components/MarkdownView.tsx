@@ -59,11 +59,11 @@ export function MarkdownView({ body, notesDirAbs, onNavigateNote }: Props) {
     }
     // hrefはクリック時にインターセプトして自前で開くため元の値を保持する。
     // ただしblocked対象（javascript:等）はhref自体を無効化する
-    return classifyLink(url, notesDirAbs).type === "blocked" ? "" : url;
+    return classifyLink(url, notesDirAbs, view.home).type === "blocked" ? "" : url;
   };
 
   const handleLinkClick = (href: string) => {
-    const action = classifyLink(href, notesDirAbs);
+    const action = classifyLink(href, notesDirAbs, view.home);
     switch (action.type) {
       case "url":
         void openUrl(action.target);
