@@ -96,6 +96,8 @@ export function installDevMock() {
 
   const handle = (cmd: string, args: Record<string, unknown> = {}) => {
     switch (cmd) {
+      case "get_connection":
+        return { platform: "local", state: "connected", config: null, dataRoot: null, message: null, externalAvailable: true, connectionId: 0, distributions: [] };
       case "get_data_root":
         return "/mock/.repo-notes";
       case "list_repos":
@@ -205,7 +207,7 @@ export function installDevMock() {
       try {
         return Promise.resolve(handle(cmd, args));
       } catch (e) {
-        return Promise.reject(e instanceof Error ? e.message : String(e));
+        return Promise.reject(e instanceof Error ? e.message : e);
       }
     },
     transformCallback: (cb: (payload: unknown) => void) => {
