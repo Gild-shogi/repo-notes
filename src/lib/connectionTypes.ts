@@ -9,6 +9,8 @@ export interface ConnectionView {
   state: "connecting" | "connected" | "disconnected";
   config: WslConfig | null;
   dataRoot: string | null;
+  home: string | null;
+  revision: number;
   message: string | null;
   externalAvailable: boolean;
   connectionId: number;

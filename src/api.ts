@@ -2,26 +2,22 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ConnectionView, WslConfig } from "./lib/connectionTypes";
 import type { DeleteOutcome, NoteContent, NoteSummary, RepoSummary, SaveOutcome } from "./types";
 
-let connectionId: number | null = null;
+let currentConnection: ConnectionView | null = null;
 
 export function updateConnection(view: ConnectionView) {
-  connectionId = view.connectionId;
+  if (currentConnection && view.revision < currentConnection.revision) return;
+  currentConnection = view;
 }
 
-const call = <T>(command: string, args: Record<string, unknown> = {}) =>
-  invoke<T>(command, { ...args, connectionId });
+const call = <T>(command: string, args: Record<string, unknown> = {}): Promise<T> => {
+  if (currentConnection?.platform === "windows" && currentConnection.state !== "connected") {
+    return Promise.reject("WSLへ再接続してから操作してください。下書きは保持しています");
+  }
+  return invoke<T>(command, { ...args, connectionId: currentConnection?.connectionId ?? null });
+};
 
-export async function getConnection(): Promise<ConnectionView> {
-  const view = await invoke<ConnectionView>("get_connection");
-  updateConnection(view);
-  return view;
-}
-
-export async function connectBackend(config: WslConfig): Promise<ConnectionView> {
-  const view = await invoke<ConnectionView>("connect_backend", { config });
-  updateConnection(view);
-  return view;
-}
+export const getConnection = () => invoke<ConnectionView>("get_connection");
+export const connectBackend = (config: WslConfig) => invoke<ConnectionView>("connect_backend", { config });
 
 export const getDataRoot = () => call<string>("get_data_root");
 

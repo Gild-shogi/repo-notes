@@ -97,7 +97,7 @@ export function installDevMock() {
   const handle = (cmd: string, args: Record<string, unknown> = {}) => {
     switch (cmd) {
       case "get_connection":
-        return { platform: "local", state: "connected", config: null, dataRoot: null, message: null, externalAvailable: true, connectionId: 0, distributions: [] };
+        return { platform: "local", state: "connected", config: null, dataRoot: null, home: null, revision: 0, message: null, externalAvailable: true, connectionId: 0, distributions: [] };
       case "get_data_root":
         return "/mock/.repo-notes";
       case "list_repos":
