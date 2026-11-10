@@ -148,13 +148,28 @@ function prepareRelease(directory: string, tag: string): void {
   if (!/^[a-f0-9]{64}$/.test(backend.backendSha256 ?? "") || windows.backendSha256 !== backend.backendSha256) throw new Error("Windows installer backend differs from release backend");
   const publishable = macos.signed === true && macos.notarized === true && windows.signed === true;
   const destination = join(directory, "prepared");
-  mkdirSync(destination, { recursive: true });
+  mkdirSync(destination);
   for (const item of reports) copyFileSync(join(directory, item.file), join(destination, item.file));
   writeFileSync(join(destination, "release-manifest.json"), JSON.stringify({ ...expected, publishable, artifacts: reports }, null, 2) + "\n");
   const files = [...reports.map((item) => item.file), "release-manifest.json"];
   writeFileSync(join(destination, "SHA256SUMS"), files.map((file) => `${sha256(join(destination, file))}  ${file}`).join("\n") + "\n");
-  writeFileSync(join(directory, "release-notes.md"), `repo-notes ${expected.version}\n\nmacOS 13+ (Intel / Apple Silicon), Windows 11 x64 + Ubuntu WSL2.\n\n${publishable ? "Platform signature and notarization checks passed." : "Validation build: signing is incomplete. This release must remain Draft."}\n`);
+  writeFileSync(join(directory, "release-notes.md"), `repo-notes ${expected.version}\n\nValidation targets: macOS 13+ (Intel / Apple Silicon), Windows 11 x64 + Ubuntu WSL2.\n\n${publishable ? "Platform signature and notarization checks passed." : "Validation build: signing is incomplete. This release must remain Draft."}\n`);
   outputs({ ...expected, tag, publishable });
+}
+
+function publishRelease(directory: string, tag: string): void {
+  if (process.env.GITHUB_ACTIONS !== "true" || process.env.GITHUB_EVENT_NAME !== "push" || process.env.GITHUB_REF_TYPE !== "tag" || process.env.GITHUB_REF_NAME !== tag) throw new Error("release writes require a tag push workflow");
+  const expected = projectVersion(tag);
+  const prepared = join(directory, "prepared");
+  const manifest = json(join(prepared, "release-manifest.json")) as Version & { publishable: boolean; artifacts: BuildReport[] };
+  if (manifest.version !== expected.version || manifest.protocolVersion !== expected.protocolVersion) throw new Error("prepared release version mismatch");
+  const files = [...manifest.artifacts.map((item) => join(prepared, item.file)), join(prepared, "release-manifest.json"), join(prepared, "SHA256SUMS")];
+  const releases = JSON.parse(run("gh", ["release", "list", "--limit", "100", "--json", "tagName,isDraft"])) as { tagName: string; isDraft: boolean }[];
+  const existing = releases.find((release) => release.tagName === tag);
+  if (existing && !existing.isDraft) throw new Error("published releases are immutable; refusing to replace assets");
+  if (existing) run("gh", ["release", "upload", tag, ...files, "--clobber"]);
+  else run("gh", ["release", "create", tag, ...files, "--verify-tag", "--draft", "--title", `repo-notes ${expected.version}`, "--notes-file", join(directory, "release-notes.md")]);
+  if (manifest.publishable) run("gh", ["release", "edit", tag, "--draft=false"]);
 }
 
 function outputs(values: Record<string, string | number | boolean>) {
@@ -166,12 +181,13 @@ function outputs(values: Record<string, string | number | boolean>) {
 
 try {
   const [command, argument, second, third, fourth] = process.argv.slice(2);
-  if (command === "check") outputs(projectVersion(argument));
+  if (command === "check") outputs(projectVersion(argument ?? (process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : undefined)));
   else if (command === "stage-backend" && argument) outputs(stageBackend(argument));
   else if (command === "verify-backend") outputs(verifyBackend(argument ?? backendDir));
   else if (command === "package-backend" && argument) packageBackend(argument);
   else if (command === "collect" && argument && second && third && fourth) collect(argument, second, third, fourth);
   else if (command === "prepare-release" && argument && second) prepareRelease(argument, second);
+  else if (command === "publish-release" && argument && second) publishRelease(argument, second);
   else throw new Error(`unknown release command: ${command ?? "(missing)"}`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

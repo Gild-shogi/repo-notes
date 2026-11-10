@@ -1,0 +1,161 @@
+name: Installer builds
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/actions.lock'
+      - 'scripts/release.ts'
+      - 'tests/release/**'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUSTUP_TOOLCHAIN: '1.89.0'
+
+jobs:
+  backend:
+    name: WSL x64 backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Check release contracts
+        run: |
+          node --test tests/release/release.test.ts
+          node scripts/release.ts check
+      - name: Install Rust target
+        run: rustup toolchain install 1.89.0 --profile minimal --target x86_64-unknown-linux-musl
+      - name: Test headless backend
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features
+      - name: Build static WSL backend
+        run: cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
+      - name: Stage and verify backend resources
+        run: |
+          node scripts/release.ts stage-backend src-tauri/target/x86_64-unknown-linux-musl/release/repo-notes-backend
+          node scripts/release.ts package-backend release-out
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: wsl-backend-resource
+          path: src-tauri/resources/backend/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: release-backend
+          path: release-out/
+          if-no-files-found: error
+
+  macos:
+    name: macOS universal DMG
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      APPLE_SIGNING_IDENTITY: '-'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6.1.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check release contracts
+        run: node scripts/release.ts check
+      - name: Install Rust targets
+        run: rustup toolchain install 1.89.0 --profile minimal --target aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Build validation installer
+        run: pnpm tauri build --target universal-apple-darwin --bundles dmg
+      - name: Verify and collect universal installer
+        run: node scripts/release.ts collect macos src-tauri/target/universal-apple-darwin/release/bundle release-out src-tauri/target/universal-apple-darwin/release/bundle/macos/repo-notes.app/Contents/MacOS/repo-notes
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: release-macos
+          path: release-out/
+          if-no-files-found: error
+
+  windows:
+    name: Windows x64 NSIS
+    needs: backend
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6.1.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: wsl-backend-resource
+          path: src-tauri/resources/backend/
+      - name: Install locked frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify bundled backend
+        run: node scripts/release.ts verify-backend
+      - name: Install Rust target
+        run: rustup toolchain install 1.89.0 --profile minimal --target x86_64-pc-windows-msvc
+      - name: Build validation installer
+        run: pnpm tauri build --target x86_64-pc-windows-msvc --bundles nsis
+      - name: Verify and collect x64 installer
+        run: node scripts/release.ts collect windows src-tauri/target/x86_64-pc-windows-msvc/release/bundle release-out src-tauri/target/x86_64-pc-windows-msvc/release/repo-notes.exe
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: release-windows
+          path: release-out/
+          if-no-files-found: error
+
+  release:
+    name: Assemble Draft Release
+    needs: [backend, macos, windows]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-artifacts/
+      - name: Verify complete release
+        run: node scripts/release.ts prepare-release release-artifacts "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+      - name: Create or refresh Draft Release
+        run: node scripts/release.ts publish-release release-artifacts "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
