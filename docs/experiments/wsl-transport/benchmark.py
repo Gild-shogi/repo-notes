@@ -188,7 +188,6 @@ def run():
                     previous = 0
                     values = []
                     for index in range(EVENT_REPEATS):
-                        # Each acknowledged event precedes the next file change.
                         started = time.perf_counter_ns()
                         (root / 'changed.txt').write_text(f'{trial}-{mode}-{index}-{time.monotonic_ns()}')
                         previous = client.event(previous)
