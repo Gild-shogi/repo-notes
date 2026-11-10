@@ -1,6 +1,7 @@
 mod asset;
 pub mod backend;
 mod cli;
+pub mod session;
 pub use cli::run as run_cli;
 #[cfg(feature = "desktop")]
 mod commands;
