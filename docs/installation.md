@@ -72,6 +72,10 @@ Windows UI のアンインストールは Windows の「設定」→「アプリ
 
 macOS は DMG 内の `repo-notes.app` を `/Applications` に配置して起動し、ローカルの既存保存先を使う。macOS 実機での導入・起動・更新は未確認。
 
+## 検証用 CI の設定
+
+現行の検証ビルドに、利用者が追加登録する Secrets はない。タグ起点の Release 書き込みは、自動発行の `github.token` を `GH_TOKEN` に割り当てて行う。macOS の `APPLE_SIGNING_IDENTITY` は ad-hoc 署名を指定しており、Developer ID・公証と Windows 署名の設定キーは署名方式の決定後に追加する。[配布 workflow](../.github/workflows/release.yml) を参照する。
+
 ## 確認済みの範囲と未確認事項
 
 Linux backend・Windows NSIS・macOS universal DMG のビルドと、全成果物の組み立て検証に成功した。Windows `0.1.0` は元の identifier を維持した未変更のインストーラーを使い、Vite を起動せず embedded runtime で実導入を確認した。対象コミット・成果物・合成 fixture・検証条件は [PR #28 の検証証跡](https://github.com/Gild-shogi/repo-notes/pull/28#issuecomment-6776966827) を参照する。
