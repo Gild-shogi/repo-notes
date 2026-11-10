@@ -24,9 +24,11 @@ make release          # 起動中アプリを終了 → ビルド → /Applicati
 ```bash
 cargo test --manifest-path src-tauri/Cargo.toml   # Rust（パーサ・パス検証）
 pnpm test                                          # vitest（URL書き換え）
-pnpm lint                                          # React Hooks recommended
+pnpm lint                                          # Oxlint + React Hooks recommended（警告もエラー）
 pnpm test:skill                                    # repo-key導出のshellテスト
 ```
+
+Lint は `oxlint.config.ts` で設定する。Oxlint の標準ルールに加え、既存の React Hooks 推奨ルールを `eslint-plugin-react-hooks` の JS プラグインとして実行する。React Compiler 由来の検査も維持するため、推奨プリセット全体を継承する。[JS プラグイン機能](https://oxc.rs/docs/guide/usage/linter/js-plugins.html)は alpha のため、Oxlint はバージョンを固定している。
 
 ## デバッグ
 
