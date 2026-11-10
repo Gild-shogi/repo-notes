@@ -92,7 +92,7 @@ Windows の同梱資源は `backend/repo-notes-backend` と `backend/manifest.js
 ```bash
 node --test tests/release/release.node-test.ts
 node scripts/release.ts check v0.1.0
-cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
+cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
 node scripts/release.ts stage-backend src-tauri/target/x86_64-unknown-linux-musl/release/repo-notes-backend
 node scripts/release.ts package-backend /tmp/repo-notes-backend-release
 ```
@@ -112,7 +112,7 @@ make release          # 起動中アプリを終了 → ビルド → /Applicati
 ### テスト
 
 ```bash
-cargo test --manifest-path src-tauri/Cargo.toml   # Rust（パーサ・パス検証）
+cargo test --manifest-path src-tauri/Cargo.toml --features backend   # Rust（パーサ・パス検証）
 pnpm test                                          # vitest（URL書き換え）
 pnpm lint                                          # React Hooks recommended
 pnpm test:skill                                    # repo-key導出のshellテスト
@@ -123,8 +123,8 @@ pnpm test:skill                                    # repo-key導出のshellテ�
 GUI ライブラリを使わないバックエンドは、同じ Rust crate の `desktop` feature を外してビルドする。Windows の接続・配置 UI とインストーラーは後続作業で、現段階では手動の開発用コマンドを提供する。
 
 ```bash
-cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --bin repo-notes-backend
-cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features
+cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend
+cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend
 src-tauri/target/debug/repo-notes-backend --help
 src-tauri/target/debug/repo-notes-backend --stdio
 ```

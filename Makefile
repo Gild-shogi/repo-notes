@@ -40,7 +40,7 @@ install-skill:
 	@echo "installed: $(AGENTS_SKILL_DIR)"
 
 test:
-	cargo test --manifest-path src-tauri/Cargo.toml
+	cargo test --manifest-path src-tauri/Cargo.toml --features backend
 	bash tests/skill/test-resolve-note-dir.sh
 	bash tests/skill/test-session-start-notes.sh
 	pnpm test

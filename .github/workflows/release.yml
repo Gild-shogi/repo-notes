@@ -45,9 +45,9 @@ jobs:
       - name: Install Rust target
         run: rustup toolchain install 1.89.0 --profile minimal --target x86_64-unknown-linux-musl
       - name: Test headless backend
-        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend
       - name: Build static WSL backend
-        run: cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
+        run: cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
       - name: Stage and verify backend resources
         run: |
           node scripts/release.ts stage-backend src-tauri/target/x86_64-unknown-linux-musl/release/repo-notes-backend
@@ -97,7 +97,7 @@ jobs:
       - name: Install Rust targets
         run: rustup toolchain install 1.89.0 --profile minimal --target aarch64-apple-darwin,x86_64-apple-darwin
       - name: Test desktop Rust behavior
-        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked --features backend
       - name: Build validation installer
         run: pnpm tauri build --target universal-apple-darwin --bundles dmg
       - name: Verify and collect universal installer
