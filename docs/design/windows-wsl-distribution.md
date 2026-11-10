@@ -1,6 +1,6 @@
 # Windows/WSL の配置・接続・配布方式
 
-状態: 設計合意済み。以下の5点は実装前の確認で承認された。比較の試作と製品の動作確認は区別する。対象は [Epic #2](https://github.com/Gild-shogi/repo-notes/issues/2)、設計作業は [#18](https://github.com/Gild-shogi/repo-notes/issues/18)。
+状態: 設計合意済み。以下の6点は実装前の確認で承認された。比較の試作と製品の動作確認は区別する。対象は [Epic #2](https://github.com/Gild-shogi/repo-notes/issues/2)、設計作業は [#18](https://github.com/Gild-shogi/repo-notes/issues/18)。
 
 ## 目的と現行の境界
 
@@ -28,6 +28,7 @@ Windows ネイティブの Tauri UI で、WSL 内のエージェントと同じ�
 3. 初回は未署名の検証用成果物で導入確認を進める。一般公開の Release は macOS の署名・公証と Windows 署名が整ってから行う。署名不足時は Draft とし、認証情報の値を取得しない。
 4. Windows の外部編集は VS Code + WSL 拡張、場所の表示は Explorer、パスと Claude 用コピーは Linux パス。VS Code 未導入・必要な拡張不足・外部操作と選択ユーザーの権限不一致は必要操作を表示する。アプリ内閲覧/編集は使える。任意ファイルを Windows の既定関連付けへ渡して起動しない。
 5. Windows が `wsl.exe` で選択したバックエンドを起動し、専用の標準入出力を常駐接続に使う。ポートや HTTP API は追加しない。画像も同じ接続から Windows の検証済み asset 経路へ渡す。接続時に対象環境と UI/backend の版を照合し、不一致はノート操作を停止する。切断時は下書きを保持して再接続を案内し、結果不明の保存を自動再送しない。終了対象はアプリが所有する backend だけとする。
+6. 同じ接続先への再接続では下書きを保持する。別の distro/ユーザー/保存先へ変える場合は未保存の下書きがある間は切り替えを止め、保存または明示的な破棄を終えてから変更する。別の保存先のキャッシュとノートを混在させない。
 
 ## 通信方式の比較
 
@@ -95,4 +96,4 @@ Makefile は46行、`release`・`install-skill`・`test` の3ターゲット。�
 
 [#18 設計](https://github.com/Gild-shogi/repo-notes/issues/18) → [#19 共通処理と backend](https://github.com/Gild-shogi/repo-notes/issues/19) → [#20 Windows UI](https://github.com/Gild-shogi/repo-notes/issues/20) → [#21 配布](https://github.com/Gild-shogi/repo-notes/issues/21) → [#22 導入検証](https://github.com/Gild-shogi/repo-notes/issues/22)。変更範囲の重なる後続は直列に進める。
 
-設計合意は上記5点。製品の実装・検証は後続の子で行う。未確認: Rust/Tauri の Windows/macOS 製品ビルド、対象 OS の下限での導入・更新、署名設定の準備、Windows の実 WebView 表示。試作成功はこれらの検証の代用にならない。
+設計合意は上記6点。製品の実装・検証は後続の子で行う。未確認: Rust/Tauri の Windows/macOS 製品ビルド、対象 OS の下限での導入・更新、署名設定の準備、Windows の実 WebView 表示。試作成功はこれらの検証の代用にならない。
