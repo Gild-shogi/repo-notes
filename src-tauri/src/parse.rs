@@ -60,7 +60,7 @@ pub fn parse_html_meta(content: &str) -> NoteMeta {
 
 /// HTMLの `<title>` をタイトルとして拾う。
 pub fn html_title_fallback(content: &str) -> Option<String> {
-    let lower = content.to_lowercase();
+    let lower = content.to_ascii_lowercase();
     let start = lower.find("<title")?;
     let open_end = content[start..].find('>')? + start + 1;
     let close = lower[open_end..].find("</title>")? + open_end;
@@ -146,5 +146,13 @@ mod tests {
             Some("ページ名".to_string())
         );
         assert_eq!(html_title_fallback("<html></html>"), None);
+    }
+
+    #[test]
+    fn html_title_after_unicode_prefix() {
+        assert_eq!(
+            html_title_fallback("İİİİİİİİİ<title>あああ</title>"),
+            Some("あああ".to_string())
+        );
     }
 }

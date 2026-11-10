@@ -1,10 +1,41 @@
 use std::path::{Path, PathBuf};
 
+use crate::{commands, store};
 use tauri_plugin_opener::OpenerExt;
+
+#[tauri::command]
+pub async fn open_note(
+    app: tauri::AppHandle,
+    repo_key: String,
+    file_name: String,
+    reveal: bool,
+) -> Result<(), String> {
+    let opener = app.clone();
+    commands::store_io(app, move |root| {
+        let path = store::note_external_path(root, &repo_key, &file_name)?;
+        if reveal {
+            opener.opener().reveal_item_in_dir(path)
+        } else {
+            opener
+                .opener()
+                .open_path(path.to_string_lossy(), None::<&str>)
+        }
+        .map_err(|error| format!("ノートを外部アプリで開けません: {error}"))
+    })
+    .await
+}
 
 /// 実行系のファイルはノート内リンクから開かせない（openで即実行され得るもの）
 const BLOCKED_EXTENSIONS: &[&str] = &[
-    "app", "command", "terminal", "workflow", "scpt", "applescript", "jar", "pkg", "dmg",
+    "app",
+    "command",
+    "terminal",
+    "workflow",
+    "scpt",
+    "applescript",
+    "jar",
+    "pkg",
+    "dmg",
 ];
 
 /// ノート内リンクから開いてよいパスかを検証し、正規化済みパスを返す。
@@ -37,12 +68,15 @@ pub fn validate_openable(path: &str, home: &Path) -> Result<PathBuf, String> {
 
 /// ノート内リンクのローカルパスを、検証した上でデフォルトアプリで開く。
 #[tauri::command]
-pub fn open_local_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
-    let home = dirs::home_dir().ok_or("ホームディレクトリが見つかりません")?;
-    let canonical = validate_openable(&path, &home)?;
-    app.opener()
-        .open_path(canonical.to_string_lossy(), None::<&str>)
-        .map_err(|e| format!("ファイルを開けませんでした: {e}"))
+pub async fn open_local_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    commands::blocking(move || {
+        let home = dirs::home_dir().ok_or("ホームディレクトリが見つかりません")?;
+        let canonical = validate_openable(&path, &home)?;
+        app.opener()
+            .open_path(canonical.to_string_lossy(), None::<&str>)
+            .map_err(|e| format!("ファイルを開けませんでした: {e}"))
+    })
+    .await
 }
 
 #[cfg(test)]
@@ -80,6 +114,8 @@ mod tests {
         assert!(validate_openable(cmd.to_str().unwrap(), home.path()).is_err());
 
         // 存在しないファイルは拒否
-        assert!(validate_openable(home.path().join("nope.md").to_str().unwrap(), home.path()).is_err());
+        assert!(
+            validate_openable(home.path().join("nope.md").to_str().unwrap(), home.path()).is_err()
+        );
     }
 }

@@ -13,6 +13,12 @@ Gitリポジトリ単位で管理する、AIエージェント用キャッチア
 
 `~/.repo-notes/`（環境変数 `REPO_NOTES_DIR` で上書き可）
 
+保存先は起動時に作成・正規化し、CRUD・監視・アセット配信・ノートの外部アプリ操作で共有する。相対パスや保存先自体のシンボリックリンクも起動時に解決する。ノート・メタデータ・pins・アセットの I/O はディレクトリ handle を基準に行い、操作途中のリンクすり替えによる領域外への逸脱を拒否する。保存領域内を指す相対シンボリックリンクは利用できる。絶対シンボリックリンクは領域内を指していても利用できない。
+
+未作成の一覧・pins は空として扱い、I/O 障害や JSON 破損は画面にエラーを表示する。破損した pins をピン操作で初期化・上書きしない。アセットはアプリ独自の `asset` protocol から同じ保存先の handle で読み込む。設定の asset scope は空で、標準ハンドラーによる別の読み込み経路は許可しない。
+
+ノート本体を削除できなかった場合は削除失敗を返す。本体の削除後にアセットやピン情報の後処理だけが失敗した場合は、ノートを閉じて後処理の警告を表示する。警告は別のノートを選ぶか、警告の「閉じる」で解除できる。
+
 ```
 ~/.repo-notes/
 └── repos/<repo-key>/
@@ -59,7 +65,7 @@ agent: claude-code                  # 任意
 <!-- repo-notes-meta {"title":"依存グラフ","created":"2026-07-02T10:00:00+09:00","tags":["viz"]} -->
 ```
 
-先頭 2KB 以内に無い場合は `<title>` → ファイル名にフォールバック。HTML ノートは**単一ファイル自己完結**（CDN・外部通信禁止）とし、sandbox 付き iframe でレンダリングされる。
+先頭 2KB 以内に無い場合は `<title>` → ファイル名にフォールバック。HTML ノートは**単一ファイル自己完結の静的 HTML** として、インライン CSS と data 画像を利用できる。表示前に DOMPurify で script・link・meta・base・子フレーム等の要素と、リンク・フォーム送信先等の属性を除去する。アプリ所有の文書用 CSP を先頭に置き、権限を付与しない sandbox 付き iframe の srcDoc として表示する。JavaScript はインライン・外部とも実行せず、外部リソースの読み込み・接続の先行確立・外部遷移を禁止する。既存の JavaScript に依存するグラフやフィルタ UI は動作しない。Markdown の Mermaid は引き続き利用できる。
 
 ## 開発
 
@@ -76,6 +82,7 @@ make release          # 起動中アプリを終了 → ビルド → /Applicati
 ```bash
 cargo test --manifest-path src-tauri/Cargo.toml   # Rust（パーサ・パス検証）
 pnpm test                                          # vitest（URL書き換え）
+pnpm lint                                          # React Hooks recommended
 pnpm test:skill                                    # repo-key導出のshellテスト
 ```
 
@@ -85,13 +92,33 @@ pnpm test:skill                                    # repo-key導出のshellテ�
 make install-skill    # ~/.claude/skills/repo-notes と ~/.agents/skills/repo-notes にコピー
 ```
 
+`install-skill` は実行内容を表示して `yes` を1回確認した後、既存アプリバイナリをビルドしてスキルの `bin/repo-notes` に同梱する。CIでは `make YES=1 install-skill` を使う。ビルド済み成果物を配る場合は `BUILD_CLI=true APP_BINARY=/path/to/repo-notes` を指定できる。macOSの配布経路を対象とし、WindowsのGUI subsystemを持つバイナリのコンソール対応は別途扱う。
+
+共通設定をrulesyncで管理する場合、直接インストールしたスキルは `rulesync import --targets claudecode --global --features skills` でソースへ取り込み、`~/claude-dotfiles/` と `setup.sh` による同期を維持する。
+
+## 保存競合の扱い
+
+アプリは編集開始時のraw内容を保存元として送り、現在のファイルと異なる場合は保存を拒否する。下書きと保存結果はアプリ起動中の画面切替後も保持し、破棄と再読込は利用者が明示して行う。保存中の追加入力も未保存として保持する。未保存の下書きはメモリ上にあり、アプリ終了・再起動からの復元は行わない。
+
+エージェントも同じアプリバイナリのheadless `note read/write` を使う。GUIは初期化せず、readのraw出力は改行を加えない。再編集はスナップショットと下書きを別ファイルに保持し、`--expected-file` と `--content-file` を渡す。新規作成は `--new`、事前確認は `--dry-run`、詳細は `repo-notes note write --help` を参照する。競合は終了コード3で通知し、強制上書き・自動マージは行わない。
+
+保存に参加する全mutatorは、保存先の永続lockfileでプロセス間排他を取り、版比較から同じディレクトリでの原子的な公開までを一緒に行う。lockfile自体は削除・置換しない。pinsも同じ排他と原子的保存を使う。公開前の一時ファイルは同期するが、rename後のディレクトリ同期による電源断耐性までは保証しない。
+
+排他を使わない外部エディタ等も、次の保存時のraw比較で既存更新を検出する。ただし比較後から公開までに非参加writerが書き込む競合や、保存先・lockfileを非参加プロセスが入れ替える操作は排他の保証外となる。アプリとエージェントの双方が同じ保存先と保存方法を使う必要がある。
+
+## ファイルI/Oの実行先
+
+一覧・全文検索・ノートCRUD・ピン操作・ローカルファイルの外部起動は非同期のTauriコマンドを入口とし、同期I/Oとロック待機を `spawn_blocking` の実行先で行う。アセットは非同期schemeで要求を受け、同じblocking実行先へ読込を渡し、既存の保存先・配信レスポンスを維持する。起動時に保持した保存先を共有し、各呼び出しで環境変数から解決し直さない。
+
+保存競合と通常の失敗、削除後のcleanup警告は従来の戻り値に保持する。workerが異常終了した場合もコマンドはエラー、assetは500を返す。印刷のようなネイティブUI操作と、メモリ上の保存先取得は同期の入口を維持する。
+
 ### デバッグ
 
-- **ブラウザ単体モード**: `pnpm dev` で起動した vite（http://localhost:1420）をブラウザで直接開くと、Tauri APIモック（`src/lib/devMock.ts`、devビルド限定）によりフィクスチャデータでUIを確認できる。レイアウト・Markdown・Mermaid・編集フローの確認に使う。画像・HTMLノートのiframeはasset protocolが無いため表示されない
+- **ブラウザ単体モード**: `pnpm dev` で起動した vite（http://localhost:1420）をブラウザで直接開くと、Tauri APIモック（`src/lib/devMock.ts`、devビルド限定）によりフィクスチャデータでUIを確認できる。レイアウト・Markdown・Mermaid・静的HTML・編集フローの確認に使う。Markdownの画像アセットはasset protocolが無いため表示されない
 - **tauri-mcp**: `cargo install --git https://github.com/dirvine/tauri-mcp` で入る MCP サーバー/CLI。`tauri-mcp tool launch_app '{"app_path":"..."}'` でアプリ起動、`take_screenshot` で画面キャプチャができる（キャプチャには端末アプリへの「画面収録」権限が必要）。macOS では `execute_js` は使えない（WKWebViewがDevToolsのHTTPエンドポイントを持たないため）
 
 ## 制限事項
 
-- `REPO_NOTES_DIR` を上書きした場合、assetProtocol の scope（`$HOME/.repo-notes/**` 固定）と齟齬が出るため、アプリでの画像表示に制限がある
+- 外部アプリ起動はノートのパスを検証して OS に渡す。受け取った外部アプリがファイルを開くまでの間の変更は、アプリ内 I/O のディレクトリ handle では制御できない
 - HTML ノートはアプリ内では編集不可（閲覧・削除のみ）。編集は外部エディタで行う
 - 画像アセットのアプリ内アップロードは非対応（エージェントがスキル経由で配置する想定）

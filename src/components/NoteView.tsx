@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
-import { deleteNote, printView, readNote } from "../api";
+import DOMPurify from "dompurify";
+import { deleteNote, openNote, printView, readNote } from "../api";
 import { formatDateTime } from "../lib/date";
 import { extractToc } from "../lib/toc";
 import {
@@ -21,11 +20,16 @@ import { MarkdownView } from "./MarkdownView";
 import { NoteEditor } from "./NoteEditor";
 import { Toc } from "./Toc";
 
+const STATIC_HTML_PREFIX =
+  '<!doctype html><meta http-equiv="Content-Security-Policy" content="' +
+  "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; " +
+  "img-src data:; base-uri 'none'; form-action 'none'\">";
+
 interface Props {
   repoKey: string;
   fileName: string;
   startInEdit?: boolean;
-  onDeleted: () => void;
+  onDeleted: (cleanupWarnings: string[]) => void;
   onNavigateNote?: (fileName: string) => void;
 }
 
@@ -66,11 +70,15 @@ export function NoteView({
 
   const remove = useMutation({
     mutationFn: () => deleteNote(repoKey, fileName),
-    onSuccess: () => {
+    onSuccess: (outcome) => {
       queryClient.invalidateQueries({ queryKey: ["notes", repoKey] });
       queryClient.invalidateQueries({ queryKey: ["repos"] });
-      onDeleted();
+      onDeleted(outcome.cleanupWarnings);
     },
+  });
+
+  const open = useMutation({
+    mutationFn: (reveal: boolean) => openNote(repoKey, fileName, reveal),
   });
 
   if (isLoading) return <div className="pane-status">読み込み中…</div>;
@@ -119,7 +127,7 @@ export function NoteView({
               className="icon-action"
               title="エディタで開く"
               aria-label="エディタで開く"
-              onClick={() => openPath(note.absPath)}
+              onClick={() => open.mutate(false)}
             >
               <OpenExternalIcon />
             </button>
@@ -128,7 +136,7 @@ export function NoteView({
               className="icon-action"
               title="Finderで表示"
               aria-label="Finderで表示"
-              onClick={() => revealItemInDir(note.absPath)}
+              onClick={() => open.mutate(true)}
             >
               <FolderIcon />
             </button>
@@ -199,6 +207,9 @@ export function NoteView({
             削除に失敗しました: {String(remove.error)}
           </div>
         )}
+        {open.isError && (
+          <div className="pane-status error">{String(open.error)}</div>
+        )}
       </header>
       {note.kind === "md" ? (
         editing ? (
@@ -218,12 +229,36 @@ export function NoteView({
           </>
         )
       ) : (
-        // allow-same-origin を付けないことで opaque origin となり、
-        // ノート内JSから親DOM・Tauri IPCへは到達できない
+        // WebKitのpreconnectはCSPを通らないため、接続ヒントを除いた文書を表示する。
         <iframe
           className="html-note-frame"
-          src={convertFileSrc(note.absPath)}
-          sandbox="allow-scripts"
+          srcDoc={
+            STATIC_HTML_PREFIX +
+            DOMPurify.sanitize(note.raw, {
+              WHOLE_DOCUMENT: true,
+              FORBID_TAGS: [
+                "base",
+                "embed",
+                "frame",
+                "frameset",
+                "iframe",
+                "link",
+                "meta",
+                "object",
+                "script",
+              ],
+              FORBID_ATTR: [
+                "action",
+                "formaction",
+                "href",
+                "ping",
+                "srcdoc",
+                "srcset",
+                "xlink:href",
+              ],
+            })
+          }
+          sandbox=""
           title={note.meta.title ?? note.fileName}
         />
       )}

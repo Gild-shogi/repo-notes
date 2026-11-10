@@ -1,49 +1,123 @@
-use crate::model::{NoteContent, NoteSummary, RepoSummary};
+use crate::model::{DeleteOutcome, NoteContent, NoteSummary, RepoSummary, SaveError, SaveOutcome};
 use crate::store;
+use crate::store::StoreState;
+use tauri::{AppHandle, Manager, State};
 
-#[tauri::command]
-pub fn get_data_root() -> String {
-    store::data_root().to_string_lossy().into_owned()
+pub(crate) async fn blocking<T, E>(
+    operation: impl FnOnce() -> Result<T, E> + Send + 'static,
+) -> Result<T, E>
+where
+    T: Send + 'static,
+    E: From<String> + Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(operation)
+        .await
+        .map_err(|error| E::from(format!("ファイル処理の実行に失敗しました: {error}")))?
+}
+
+pub(crate) async fn store_io<T, E>(
+    app: AppHandle,
+    operation: impl FnOnce(&store::DataRoot) -> Result<T, E> + Send + 'static,
+) -> Result<T, E>
+where
+    T: Send + 'static,
+    E: From<String> + Send + 'static,
+{
+    blocking(move || {
+        let state = app.state::<StoreState>();
+        operation(state.get().map_err(E::from)?)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn list_repos() -> Vec<RepoSummary> {
-    store::list_repos(&store::data_root())
+pub fn get_data_root(state: State<StoreState>) -> Result<String, String> {
+    Ok(state.get()?.path().to_string_lossy().into_owned())
 }
 
 #[tauri::command]
-pub fn list_notes(repo_key: String, query: Option<String>) -> Result<Vec<NoteSummary>, String> {
-    store::list_notes(&store::data_root(), &repo_key, query.as_deref())
+pub async fn list_repos(app: AppHandle) -> Result<Vec<RepoSummary>, String> {
+    store_io(app, store::list_repos).await
 }
 
 #[tauri::command]
-pub fn set_pinned(repo_key: String, file_name: String, pinned: bool) -> Result<(), String> {
-    store::set_pinned(&store::data_root(), &repo_key, &file_name, pinned)
+pub async fn list_notes(
+    app: AppHandle,
+    repo_key: String,
+    query: Option<String>,
+) -> Result<Vec<NoteSummary>, String> {
+    store_io(app, move |root| {
+        store::list_notes(root, &repo_key, query.as_deref())
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn set_repo_pinned(repo_key: String, pinned: bool) -> Result<(), String> {
-    store::set_repo_pinned(&store::data_root(), &repo_key, pinned)
+pub async fn set_pinned(
+    app: AppHandle,
+    repo_key: String,
+    file_name: String,
+    pinned: bool,
+) -> Result<(), String> {
+    store_io(app, move |root| {
+        store::set_pinned(root, &repo_key, &file_name, pinned)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn read_note(repo_key: String, file_name: String) -> Result<NoteContent, String> {
-    store::read_note(&store::data_root(), &repo_key, &file_name)
+pub async fn set_repo_pinned(app: AppHandle, repo_key: String, pinned: bool) -> Result<(), String> {
+    store_io(app, move |root| {
+        store::set_repo_pinned(root, &repo_key, pinned)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn write_note(repo_key: String, file_name: String, content: String) -> Result<(), String> {
-    store::write_note(&store::data_root(), &repo_key, &file_name, &content)
+pub async fn read_note(
+    app: AppHandle,
+    repo_key: String,
+    file_name: String,
+) -> Result<NoteContent, String> {
+    store_io(app, move |root| {
+        store::read_note(root, &repo_key, &file_name)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn create_note(repo_key: String, title: String) -> Result<String, String> {
-    store::create_note(&store::data_root(), &repo_key, &title)
+pub async fn write_note(
+    app: AppHandle,
+    repo_key: String,
+    file_name: String,
+    content: String,
+    expected_raw: String,
+) -> Result<SaveOutcome, SaveError> {
+    store_io(app, move |root| {
+        store::write_note(root, &repo_key, &file_name, &content, &expected_raw)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn delete_note(repo_key: String, file_name: String) -> Result<(), String> {
-    store::delete_note(&store::data_root(), &repo_key, &file_name)
+pub async fn create_note(
+    app: AppHandle,
+    repo_key: String,
+    title: String,
+) -> Result<String, String> {
+    store_io(app, move |root| store::create_note(root, &repo_key, &title)).await
+}
+
+#[tauri::command]
+pub async fn delete_note(
+    app: AppHandle,
+    repo_key: String,
+    file_name: String,
+) -> Result<DeleteOutcome, String> {
+    store_io(app, move |root| {
+        store::delete_note(root, &repo_key, &file_name)
+    })
+    .await
 }
 
 /// OSネイティブの印刷ダイアログを開く（macOSでは「PDFとして保存」も可能）

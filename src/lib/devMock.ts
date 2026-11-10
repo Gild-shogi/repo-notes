@@ -1,10 +1,5 @@
 /**
- * ブラウザ単体でUIを確認するための Tauri API モック。
- * `pnpm dev` で起動した vite をブラウザで直接開いたときのみ有効になる
- * （Tauri 上では __TAURI_INTERNALS__ が既に存在するため何もしない）。
- *
- * 制限: convertFileSrc はパスをそのまま返すため、画像・HTMLノートの
- * iframe は実際には読み込めない。レイアウト・Markdown・Mermaid の確認用。
+ * ブラウザ単体ではasset protocolを使えないため、Markdownの画像は表示できない。
  */
 
 const MD_FIXTURE = `---
@@ -164,9 +159,9 @@ export function installDevMock() {
       }
       case "write_note": {
         const fileName = args.fileName as string;
-        if (!notes.has(fileName)) throw new Error(`ノートが存在しません: ${fileName}`);
+        if (notes.get(fileName)?.raw !== args.expectedRaw) throw { kind: "conflict" };
         notes.set(fileName, { raw: args.content as string, kind: "md" });
-        return null;
+        return { cleanupWarnings: [] };
       }
       case "create_note": {
         const title = (args.title as string).trim();
@@ -182,8 +177,9 @@ export function installDevMock() {
       }
       case "delete_note":
         notes.delete(args.fileName as string);
-        return null;
+        return { cleanupWarnings: [] };
       case "open_local_path":
+      case "open_note":
         console.log("[devMock] open_local_path:", args);
         return null;
       case "print_view":

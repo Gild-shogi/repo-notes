@@ -1,0 +1,49 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - epic/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validation:
+    name: Rust, frontend and skill checks
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6.1.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install locked frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check TypeScript
+        run: pnpm exec tsc --noEmit
+      - name: Check React rules
+        run: pnpm lint
+      - name: Test frontend behavior
+        run: pnpm test
+      - name: Test agent skill scripts
+        run: pnpm test:skill
+        env:
+          GIT_AUTHOR_NAME: Repo Notes CI
+          GIT_AUTHOR_EMAIL: ci@example.invalid
+          GIT_COMMITTER_NAME: Repo Notes CI
+          GIT_COMMITTER_EMAIL: ci@example.invalid
+      - name: Install Rust toolchain
+        run: rustup toolchain install 1.89.0 --profile minimal
+      - name: Test Rust behavior
+        run: cargo +1.89.0 test --manifest-path src-tauri/Cargo.toml --locked

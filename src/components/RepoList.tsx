@@ -10,7 +10,7 @@ interface Props {
 
 export function RepoList({ selectedRepoKey, onSelect }: Props) {
   const queryClient = useQueryClient();
-  const { data: repos, isLoading } = useQuery({
+  const { data: repos, isLoading, error } = useQuery({
     queryKey: ["repos"],
     queryFn: listRepos,
   });
@@ -24,6 +24,7 @@ export function RepoList({ selectedRepoKey, onSelect }: Props) {
   });
 
   if (isLoading) return <div className="pane-status">読み込み中…</div>;
+  if (error) return <div className="pane-status error">リポジトリを読み込めません: {String(error)}</div>;
   if (!repos || repos.length === 0) {
     return (
       <div className="pane-status">
@@ -37,6 +38,8 @@ export function RepoList({ selectedRepoKey, onSelect }: Props) {
   }
 
   return (
+    <>
+    {pin.isError && <div className="pane-status error">{String(pin.error)}</div>}
     <ul className="repo-list">
       {repos.map((repo) => (
         <li key={repo.repoKey}>
@@ -69,5 +72,6 @@ export function RepoList({ selectedRepoKey, onSelect }: Props) {
         </li>
       ))}
     </ul>
+    </>
   );
 }
