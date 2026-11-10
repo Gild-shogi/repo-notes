@@ -14,6 +14,7 @@ export function rewriteAssetUrl(
   if (src === "") return "";
   if (/^(https?:|data:|asset:|blob:)/i.test(src)) return src;
   if (src.startsWith("http://asset.localhost")) return src;
+  try { src = decodeURIComponent(src); } catch { return ""; }
   // 絶対パス・スキーム付き・トラバーサルは拒否
   if (src.startsWith("/") || src.includes("..") || /^[a-z][a-z0-9+.-]*:/i.test(src)) {
     return "";
