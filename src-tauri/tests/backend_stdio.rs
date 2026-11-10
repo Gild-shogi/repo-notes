@@ -133,7 +133,11 @@ impl Drop for Session {
 #[test]
 fn accepted_session_preserves_conflicts_and_serves_assets_from_the_same_root() {
     let temporary = tempfile::tempdir().unwrap();
-    let notes = temporary.path().join("repos/demo--12345678/notes");
+    let notes = temporary
+        .path()
+        .canonicalize()
+        .unwrap()
+        .join("repos/demo--12345678/notes");
     std::fs::create_dir_all(&notes).unwrap();
     std::fs::write(notes.join("a.md"), "original").unwrap();
     let image = notes.join("画像 #1.svg");
