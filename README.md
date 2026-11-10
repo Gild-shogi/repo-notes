@@ -67,6 +67,38 @@ agent: claude-code                  # 任意
 
 先頭 2KB 以内に無い場合は `<title>` → ファイル名にフォールバック。HTML ノートは**単一ファイル自己完結の静的 HTML** として、インライン CSS と data 画像を利用できる。表示前に DOMPurify で script・link・meta・base・子フレーム等の要素と、リンク・フォーム送信先等の属性を除去する。アプリ所有の文書用 CSP を先頭に置き、権限を付与しない sandbox 付き iframe の srcDoc として表示する。JavaScript はインライン・外部とも実行せず、外部リソースの読み込み・接続の先行確立・外部遷移を禁止する。既存の JavaScript に依存するグラフやフィルタ UI は動作しない。Markdown の Mermaid は引き続き利用できる。
 
+## インストーラーの配布
+
+`v<package.json の version>` タグを起点に `Installer builds` が動く。`package.json`、Cargo package、Tauri config、同梱 backend の版と protocol を照合し、WSL backend・macOS DMG・Windows NSIS の全ビルドが成功してから同じ GitHub Release へ添付する。PR では同じビルドを行って Actions artifact に保存し、Release は作らない。
+
+| ビルド対象 | 成果物 | 実行時の構成 |
+|---|---|---|
+| macOS 13 以降 / Intel・Apple Silicon | universal `.dmg` | ローカルのノート処理 |
+| Windows 11 x64 + 既存 Ubuntu WSL2 | NSIS `.exe` | Windows UI と同梱 Linux backend |
+| WSL Linux x64 | static musl backend `.tar.gz` | 同じ版のエージェント用 CLI / backend |
+
+ビルド対象と実機検証済みの範囲は別であり、下限 OS の導入・更新確認は #22 の証跡を参照する。Windows ARM64、Ubuntu 以外の distro、完全オフライン導入は初回対象外。WebView2 がない環境では Tauri インストーラーが runtime を取得するためネット接続が必要。WSL2 自体は利用者が導入し、アプリは権限昇格・OS 再起動・distro の作成を自動実行しない。
+
+初回の workflow は未署名の検証用成果物を作り、Release を **Draft のまま** にする。macOS は ad-hoc 署名であり Developer ID 署名・公証済みではない。Windows の署名 provider / HSM / 証明書運用は未設定・未検証で、CI に汎用の署名コマンドや新しいクラウド連携を追加していない。署名設定の存在だけでは公開せず、macOS の Developer ID 署名・公証・staple と Windows のアプリ/インストーラー両方の実署名検証が成功するまで一般公開しない。署名方式と CI 設定は別途決定する必要がある。[macOS 署名](https://v2.tauri.app/distribute/sign/macos/)、[Windows 署名](https://v2.tauri.app/distribute/sign/windows/)
+
+Draft の利用には OS の警告やポリシー上の制限がある。Windows Smart App Control 等で未署名アプリが拒否される環境について、保護設定の無効化は案内しない。署名済みの公開版が必要な環境は準備完了まで利用対象にしない。
+
+Windows の同梱資源は `backend/repo-notes-backend` と `backend/manifest.json`。manifest は `version`・`protocolVersion`・`sha256` を持ち、resource と WSL への配備後の双方で照合する。WSL の配置先は選択した Linux ユーザーの `~/.local/share/repo-notes/backend/<version>/` で、ノートとは別に保持する。上書き導入では同じ版の UI/backend を起動し、ノート形式の移行やユーザーノートの削除を行わない。
+
+`SHA256SUMS` と `release-manifest.json` を各配布物と一緒に添付する。公開済み Release の成果物は再実行で置換せず、Draft の再実行だけを更新する。失敗した OS ビルドや版不一致の成果物は一般公開しない。
+
+配布のロジックは Node 24 標準ライブラリの `scripts/release.ts` にまとめている。
+
+```bash
+node --test tests/release/release.test.ts
+node scripts/release.ts check v0.1.0
+cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
+node scripts/release.ts stage-backend src-tauri/target/x86_64-unknown-linux-musl/release/repo-notes-backend
+node scripts/release.ts package-backend /tmp/repo-notes-backend-release
+```
+
+OS 別配布は CI に閉じ、Makefile は `release`・`install-skill`・`test` の3ターゲットを維持する。ローカルの macOS 再配置は `.app` だけをビルドし、GitHub Release の作成とは分ける。今回増えるローカル処理は配布スクリプトの直接実行で足りるため、Just は導入しない。今後ローカルの複数行・OS 別タスクが増えた場合に再比較する。
+
 ## 開発
 
 ```bash

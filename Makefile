@@ -14,7 +14,7 @@ release:
 	-osascript -e 'tell application "$(APP_NAME)" to quit' 2>/dev/null
 	-pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" 2>/dev/null
 	sleep 1
-	pnpm tauri build
+	pnpm tauri build --bundles app
 	rm -rf "$(INSTALL_DIR)/$(APP_NAME).app"
 	cp -R "$(APP_BUNDLE)" "$(INSTALL_DIR)/"
 	open "$(INSTALL_DIR)/$(APP_NAME).app"

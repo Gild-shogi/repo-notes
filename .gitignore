@@ -26,3 +26,7 @@ dist-ssr
 *.sw?
 
 /src-tauri/resources/backend/
+
+/release-out/
+
+/release-artifacts/
