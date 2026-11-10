@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 type Version = { version: string; protocolVersion: number };
 type BackendManifest = Version & { sha256: string };
@@ -62,6 +62,101 @@ function stageBackend(source: string): BackendManifest {
   return verifyBackend(backendDir);
 }
 
+
+type Platform = "macos" | "windows" | "backend";
+type BuildReport = Version & {
+  platform: Platform;
+  file: string;
+  sha256: string;
+  signed: boolean;
+  notarized: boolean;
+  backendSha256?: string;
+};
+
+function run(command: string, args: string[]): string {
+  const result = spawnSync(command, args, { encoding: "utf8", timeout: 30_000 });
+  if (result.error || result.status !== 0) throw new Error(`${command} failed`);
+  return result.stdout.trim();
+}
+
+function releaseFile(platform: Platform, version: string): string {
+  if (platform === "macos") return `repo-notes_${version}_macos_universal.dmg`;
+  if (platform === "windows") return `repo-notes_${version}_windows_x64_setup.exe`;
+  return `repo-notes-backend_${version}_linux_x64.tar.gz`;
+}
+
+function report(output: string, value: BuildReport): void {
+  writeFileSync(join(output, `${value.platform}.json`), JSON.stringify(value, null, 2) + "\n");
+}
+
+function packageBackend(output: string): void {
+  const manifest = verifyBackend(backendDir);
+  mkdirSync(output, { recursive: true });
+  const file = releaseFile("backend", manifest.version);
+  run("tar", ["-czf", resolve(output, file), "-C", backendDir, "repo-notes-backend", "manifest.json"]);
+  report(output, { ...projectVersion(), platform: "backend", file, sha256: sha256(join(output, file)), backendSha256: manifest.sha256, signed: false, notarized: false });
+}
+
+function windowsSignature(path: string): boolean {
+  const command = 'if ((Get-AuthenticodeSignature -LiteralPath $env:REPO_NOTES_SIGN_FILE).Status -eq "Valid") { exit 0 } else { exit 1 }';
+  return spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", Buffer.from(command, "utf16le").toString("base64")], {
+    env: { ...process.env, REPO_NOTES_SIGN_FILE: resolve(path) }, timeout: 30_000, stdio: "ignore",
+  }).status === 0;
+}
+
+function collect(platform: string, bundle: string, output: string, executable: string): void {
+  const expected = projectVersion();
+  if (platform !== "macos" && platform !== "windows") throw new Error("unknown installer platform");
+  const suffix = platform === "macos" ? ".dmg" : ".exe";
+  const matches = readdirSync(bundle, { recursive: true }).filter((entry) => typeof entry === "string" && entry.endsWith(suffix));
+  if (matches.length !== 1) throw new Error(`expected exactly one ${suffix} installer`);
+  if (platform === "macos") {
+    const arches = run("lipo", ["-archs", executable]).split(/\s+/);
+    if (!arches.includes("arm64") || !arches.includes("x86_64")) throw new Error("macOS app is not universal");
+  } else {
+    const pe = readFileSync(executable);
+    const offset = pe.length >= 64 ? pe.readUInt32LE(60) : -1;
+    if (offset < 0 || offset + 6 > pe.length || pe.readUInt32LE(offset) !== 0x4550 || pe.readUInt16LE(offset + 4) !== 0x8664) throw new Error("Windows app is not x86_64 PE");
+  }
+  mkdirSync(output, { recursive: true });
+  const file = releaseFile(platform, expected.version);
+  copyFileSync(join(bundle, matches[0] as string), join(output, file));
+  let signed = false;
+  let notarized = false;
+  let backendSha256: string | undefined;
+  if (platform === "macos") {
+    const app = resolve(executable, "../../..");
+    const verify = spawnSync("codesign", ["--verify", "--deep", "--strict", app], { stdio: "ignore" });
+    const details = spawnSync("codesign", ["-dv", "--verbose=4", app], { encoding: "utf8" });
+    signed = verify.status === 0 && /Authority=Developer ID Application:/.test(details.stderr ?? "");
+    notarized = signed && spawnSync("spctl", ["--assess", "--type", "execute", app], { stdio: "ignore" }).status === 0 && spawnSync("xcrun", ["stapler", "validate", join(output, file)], { stdio: "ignore" }).status === 0;
+  } else {
+    backendSha256 = verifyBackend(backendDir).sha256;
+    signed = windowsSignature(executable) && windowsSignature(join(output, file));
+  }
+  report(output, { ...expected, platform, file, sha256: sha256(join(output, file)), signed, notarized, ...(backendSha256 ? { backendSha256 } : {}) });
+}
+
+function prepareRelease(directory: string, tag: string): void {
+  const expected = projectVersion(tag);
+  const reports = (["macos", "windows", "backend"] as const).map((platform) => {
+    const value = json(join(directory, `${platform}.json`)) as BuildReport;
+    if (value.platform !== platform || value.version !== expected.version || value.protocolVersion !== expected.protocolVersion || value.file !== releaseFile(platform, expected.version) || value.sha256 !== sha256(join(directory, value.file))) throw new Error(`invalid ${platform} release artifact`);
+    return value;
+  });
+  const [macos, windows, backend] = reports;
+  if (!/^[a-f0-9]{64}$/.test(backend.backendSha256 ?? "") || windows.backendSha256 !== backend.backendSha256) throw new Error("Windows installer backend differs from release backend");
+  const publishable = macos.signed === true && macos.notarized === true && windows.signed === true;
+  const destination = join(directory, "prepared");
+  mkdirSync(destination, { recursive: true });
+  for (const item of reports) copyFileSync(join(directory, item.file), join(destination, item.file));
+  writeFileSync(join(destination, "release-manifest.json"), JSON.stringify({ ...expected, publishable, artifacts: reports }, null, 2) + "\n");
+  const files = [...reports.map((item) => item.file), "release-manifest.json"];
+  writeFileSync(join(destination, "SHA256SUMS"), files.map((file) => `${sha256(join(destination, file))}  ${file}`).join("\n") + "\n");
+  writeFileSync(join(directory, "release-notes.md"), `repo-notes ${expected.version}\n\nmacOS 13+ (Intel / Apple Silicon), Windows 11 x64 + Ubuntu WSL2.\n\n${publishable ? "Platform signature and notarization checks passed." : "Validation build: signing is incomplete. This release must remain Draft."}\n`);
+  outputs({ ...expected, tag, publishable });
+}
+
 function outputs(values: Record<string, string | number | boolean>) {
   for (const [key, value] of Object.entries(values)) {
     console.log(`${key}=${value}`);
@@ -70,10 +165,13 @@ function outputs(values: Record<string, string | number | boolean>) {
 }
 
 try {
-  const [command, argument] = process.argv.slice(2);
+  const [command, argument, second, third, fourth] = process.argv.slice(2);
   if (command === "check") outputs(projectVersion(argument));
   else if (command === "stage-backend" && argument) outputs(stageBackend(argument));
   else if (command === "verify-backend") outputs(verifyBackend(argument ?? backendDir));
+  else if (command === "package-backend" && argument) packageBackend(argument);
+  else if (command === "collect" && argument && second && third && fourth) collect(argument, second, third, fourth);
+  else if (command === "prepare-release" && argument && second) prepareRelease(argument, second);
   else throw new Error(`unknown release command: ${command ?? "(missing)"}`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

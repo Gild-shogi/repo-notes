@@ -52,3 +52,29 @@ test("backend resource verification rejects modified binary content", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("release preparation keeps unsigned builds private and rejects missing platforms", () => {
+  const root = mkdtempSync(join(tmpdir(), "repo-notes-release-"));
+  try {
+    mkdirSync(join(root, "src-tauri", "src"), { recursive: true });
+    mkdirSync(join(root, "artifacts"));
+    writeFileSync(join(root, "package.json"), JSON.stringify({ version: "0.1.0" }));
+    writeFileSync(join(root, "src-tauri", "tauri.conf.json"), JSON.stringify({ version: "0.1.0" }));
+    writeFileSync(join(root, "src-tauri", "Cargo.toml"), '[package]\nversion = "0.1.0"\n');
+    writeFileSync(join(root, "src-tauri", "src", "backend.rs"), "pub const PROTOCOL_VERSION: u32 = 1;\n");
+    for (const [platform, suffix] of [["macos", "macos_universal.dmg"], ["windows", "windows_x64_setup.exe"], ["backend", "linux_x64.tar.gz"]]) {
+      const file = `repo-notes${platform === "backend" ? "-backend" : ""}_0.1.0_${suffix}`;
+      const bytes = Buffer.from(platform);
+      writeFileSync(join(root, "artifacts", file), bytes);
+      writeFileSync(join(root, "artifacts", `${platform}.json`), JSON.stringify({ version: "0.1.0", protocolVersion: 1, platform, file, sha256: createHash("sha256").update(bytes).digest("hex"), signed: false, notarized: false, backendSha256: "a".repeat(64) }));
+    }
+    const prepared = spawnSync(process.execPath, [script, "prepare-release", "artifacts", "v0.1.0"], { cwd: root, encoding: "utf8" });
+    assert.equal(prepared.status, 0, prepared.stderr);
+    assert.match(prepared.stdout, /publishable=false/);
+    rmSync(join(root, "artifacts", "windows.json"));
+    const incomplete = spawnSync(process.execPath, [script, "prepare-release", "artifacts", "v0.1.0"], { cwd: root, encoding: "utf8" });
+    assert.notEqual(incomplete.status, 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
