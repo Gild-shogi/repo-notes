@@ -120,7 +120,7 @@ pnpm test:skill                                    # repo-key導出のshellテ�
 
 ### WSL バックエンド
 
-GUI ライブラリを使わないバックエンドは、同じ Rust crate の `desktop` feature を外してビルドする。Windows の接続・配置 UI とインストーラーは後続作業で、現段階では手動の開発用コマンドを提供する。
+GUI ライブラリを使わないバックエンドは、同じ Rust crate の `desktop` feature を外し、`backend` feature を指定してビルドする。Windows 版はインストーラーに同梱した backend を接続時に配置する。以下はバックエンド単体の開発用コマンド。
 
 ```bash
 cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend
@@ -141,7 +141,7 @@ src-tauri/target/debug/repo-notes-backend --stdio
 
 stdout は応答とイベント専用、診断は stderr に出力する。要求の形式不正は `invalidRequest` を返して接続を終了する。保存競合は既存の `conflict`、I/O 失敗は `failure` で通知し、接続は維持する。標準入力の EOF または `shutdown` で所有するバックエンドと監視を終了し、WSL 全体や他のプロセスを停止しない。結果不明の保存は呼び出し側で自動再送しない。
 
-既存の `note read/write` も `repo-notes-backend` から利用でき、GUI と同じ保存元比較・排他・原子的保存を使う。接続の wire 型は `src-tauri/src/backend.rs` に置き、保存処理をプロトコルへ複製しない。新規ノートのファイル日付と `created` はバックエンドが動く端末の時刻設定に従う。WSL は通常 Windows のタイムゾーンに追従するが、同期設定やプロセスの `TZ` 上書きによって異なる。
+既存の `note read/write` も `repo-notes-backend` から利用でき、GUI と同じ保存元比較・排他・原子的保存を使う。接続の wire 型は `src-tauri/src/backend.rs` に置き、保存処理をプロトコルへ複製しない。新規ノートのファイル日付と `created` はバックエンドが動く端末の時刻設定に従い、画面の日時は閲覧している Windows／macOS のタイムゾーンで表示する。WSL は既定の `useWindowsTimezone=true` で Windows のタイムゾーンへ追従するが、同期設定やプロセスの `TZ` 上書きによって異なる。[WSL の時刻設定](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#time-settings)
 
 ### スキルのインストール
 
