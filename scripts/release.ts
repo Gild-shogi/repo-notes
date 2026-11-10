@@ -75,7 +75,7 @@ type BuildReport = Version & {
 
 function run(command: string, args: string[]): string {
   const result = spawnSync(command, args, { encoding: "utf8", timeout: 30_000 });
-  if (result.error || result.status !== 0) throw new Error(`${command} failed`);
+  if (result.error || result.status !== 0) throw new Error(`${command} failed: ${result.error?.message || result.stderr.trim() || `exit ${result.status}`}`);
   return result.stdout.trim();
 }
 
@@ -169,7 +169,7 @@ function publishRelease(directory: string, tag: string): void {
   if (existing && !existing.isDraft) throw new Error("published releases are immutable; refusing to replace assets");
   if (existing) run("gh", ["release", "upload", tag, ...files, "--clobber"]);
   else run("gh", ["release", "create", tag, ...files, "--verify-tag", "--draft", "--title", `repo-notes ${expected.version}`, "--notes-file", join(directory, "release-notes.md")]);
-  if (manifest.publishable) run("gh", ["release", "edit", tag, "--draft=false"]);
+  if (manifest.publishable === true) run("gh", ["release", "edit", tag, "--draft=false"]);
 }
 
 function outputs(values: Record<string, string | number | boolean>) {

@@ -83,8 +83,21 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check release contracts
         run: node scripts/release.ts check
+      - name: Check frontend and agent skill behavior
+        run: |
+          pnpm exec tsc --noEmit
+          pnpm lint
+          pnpm test
+          pnpm test:skill
+        env:
+          GIT_AUTHOR_NAME: Repo Notes CI
+          GIT_AUTHOR_EMAIL: ci@example.invalid
+          GIT_COMMITTER_NAME: Repo Notes CI
+          GIT_COMMITTER_EMAIL: ci@example.invalid
       - name: Install Rust targets
         run: rustup toolchain install 1.89.0 --profile minimal --target aarch64-apple-darwin,x86_64-apple-darwin
+      - name: Test desktop Rust behavior
+        run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - name: Build validation installer
         run: pnpm tauri build --target universal-apple-darwin --bundles dmg
       - name: Verify and collect universal installer
