@@ -9,6 +9,7 @@ import type { SaveError, SaveOutcome } from "../types";
 import { editorExtensions } from "../lib/editorTheme";
 import { useNoteDraft } from "../lib/noteDrafts";
 import { canAutoSave } from "../lib/saveState";
+import { useConnection } from "../lib/connection";
 
 interface Props {
   repoKey: string;
@@ -17,12 +18,14 @@ interface Props {
 }
 
 export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
+  const { switchingTarget } = useConnection();
   const [draft, updateDraft] = useNoteDraft(repoKey, fileName, initialContent);
   const { content, expectedRaw: savedContent, operation } = draft;
   const [confirmingReload, setConfirmingReload] = useState(false);
   const dirty = content !== savedContent;
   const saving = operation.kind === "saving";
   const reloading = operation.kind === "reloading";
+  const readOnly = reloading || switchingTarget;
   const saveError = operation.kind === "save-error" ? operation.error : null;
   const conflict = saveError?.kind === "conflict" || operation.kind === "reload-error" || reloading;
   const blocked = conflict || !canAutoSave(saveError);
@@ -52,8 +55,8 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
 
   const { mutate } = save;
   const saveContent = useCallback((value: string) => {
-    if (!saving && !reloading && !blocked) mutate({ content: value, expectedRaw: savedContent });
-  }, [saving, mutate, reloading, blocked, savedContent]);
+    if (!saving && !readOnly && !blocked) mutate({ content: value, expectedRaw: savedContent });
+  }, [saving, mutate, readOnly, blocked, savedContent]);
 
   const extensions = useMemo(
     () => [
@@ -77,7 +80,9 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
     <div className="note-editor">
       <div className="editor-toolbar">
         <span className={`editor-status ${dirty ? "dirty" : ""}`}>
-          {saving
+          {switchingTarget
+            ? "接続先を変更中…"
+            : saving
             ? "保存中…"
             : dirty
               ? "未保存の変更あり"
@@ -97,16 +102,16 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
         {blocked && (confirmingReload ? (
           <>
             <span className="editor-status error">下書きを破棄して最新内容を読み込みます。</span>
-            <button type="button" className="btn danger" disabled={reloading} onClick={() => reload.mutate()}>破棄して読込</button>
-            <button type="button" className="btn" disabled={reloading} onClick={() => setConfirmingReload(false)}>取消</button>
+            <button type="button" className="btn danger" disabled={readOnly} onClick={() => reload.mutate()}>破棄して読込</button>
+            <button type="button" className="btn" disabled={readOnly} onClick={() => setConfirmingReload(false)}>取消</button>
           </>
         ) : (
-          <button type="button" className="btn" onClick={() => setConfirmingReload(true)}>下書きを破棄して最新を読込</button>
+          <button type="button" className="btn" disabled={switchingTarget} onClick={() => setConfirmingReload(true)}>下書きを破棄して最新を読込</button>
         ))}
         <button
           type="button"
           className="btn primary"
-          disabled={!dirty || saving || reloading || blocked}
+          disabled={!dirty || saving || readOnly || blocked}
           onClick={() => saveContent(content)}
         >
           保存 (⌘S)
@@ -114,9 +119,10 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
       </div>
       <CodeMirror
         value={content}
-        editable={!reloading}
+        editable={!readOnly}
         extensions={extensions}
         onChange={(value) => {
+          if (readOnly) return;
           updateDraft((current) => ({ ...current, content: value }));
         }}
         onBlur={() => {

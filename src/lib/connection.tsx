@@ -11,11 +11,13 @@ const Context = createContext<{
   view: ConnectionView;
   connect: (config: WslConfig) => Promise<void>;
   targetRevision: number;
+  switchingTarget: boolean;
 } | null>(null);
 
 export function ConnectionProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState(INITIAL);
   const [targetRevision, setTargetRevision] = useState(0);
+  const [switchingTarget, setSwitchingTarget] = useState(false);
   const { unsaved, discard } = useDraftChanges();
   const queries = useQueryClient();
   const revision = useRef(-1);
@@ -42,6 +44,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     if (changed && unsaved.length) throw new Error("未保存の下書きを保存または明示的に破棄してから接続先を変更してください");
     if (queries.isMutating()) throw new Error("ノートの操作が終わってから接続してください");
     connecting.current = true;
+    setSwitchingTarget(changed);
     try {
       await queries.cancelQueries();
       const next = await connectBackend(config);
@@ -56,9 +59,12 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
         setView(next);
       }
       void queries.invalidateQueries();
-    } finally { connecting.current = false; }
+    } finally {
+      connecting.current = false;
+      setSwitchingTarget(false);
+    }
   }, [view.config, unsaved.length, queries, discard]);
-  const value = useMemo(() => ({ view, connect, targetRevision }), [view, connect, targetRevision]);
+  const value = useMemo(() => ({ view, connect, targetRevision, switchingTarget }), [view, connect, targetRevision, switchingTarget]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

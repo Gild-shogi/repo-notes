@@ -389,6 +389,7 @@ impl Windows {
                                 view.state = "disconnected";
                                 view.message = Some(message);
                                 view.external_available = false;
+                                view.revision += 1;
                                 let _ = app_events.emit(CONNECTION_EVENT, view.clone());
                             }
                         }
@@ -495,10 +496,10 @@ impl Windows {
         if id != Some(view.connection_id) || view.state != "connected" {
             return Err("接続先が変更されたため外部操作を中止しました".into());
         }
-        if !view.external_available {
+        let config = view.config.ok_or("接続設定がありません")?;
+        if execute(&config, false, &["id", "-un"])? != config.user {
             return Err("外部操作はWSLの既定ユーザーで行われます。選択ユーザーと一致する接続設定を使ってください。アプリ内の編集は利用できます".into());
         }
-        let config = view.config.ok_or("接続設定がありません")?;
         if reveal {
             let unc = format!(
                 "\\\\wsl.localhost\\{}{}",
