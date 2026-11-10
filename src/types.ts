@@ -8,7 +8,7 @@ export interface SaveOutcome {
   cleanupWarnings: string[];
 }
 
-export type SaveError = { kind: "conflict" } | { kind: "failure"; message: string };
+export type SaveError = { kind: "conflict" } | { kind: "failure" | "indeterminate"; message: string };
 
 export interface RepoSummary {
   repoKey: string;
