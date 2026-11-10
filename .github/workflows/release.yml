@@ -40,7 +40,7 @@ jobs:
           package-manager-cache: false
       - name: Check release contracts
         run: |
-          node --test tests/release/release.test.ts
+          node --test tests/release/release.node-test.ts
           node scripts/release.ts check
       - name: Install Rust target
         run: rustup toolchain install 1.89.0 --profile minimal --target x86_64-unknown-linux-musl

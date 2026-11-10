@@ -90,7 +90,7 @@ Windows の同梱資源は `backend/repo-notes-backend` と `backend/manifest.js
 配布のロジックは Node 24 標準ライブラリの `scripts/release.ts` にまとめている。
 
 ```bash
-node --test tests/release/release.test.ts
+node --test tests/release/release.node-test.ts
 node scripts/release.ts check v0.1.0
 cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
 node scripts/release.ts stage-backend src-tauri/target/x86_64-unknown-linux-musl/release/repo-notes-backend
