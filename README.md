@@ -109,7 +109,7 @@ src-tauri/target/debug/repo-notes-backend --stdio
 
 stdout は応答とイベント専用、診断は stderr に出力する。要求の形式不正は `invalidRequest` を返して接続を終了する。保存競合は既存の `conflict`、I/O 失敗は `failure` で通知し、接続は維持する。標準入力の EOF または `shutdown` で所有するバックエンドと監視を終了し、WSL 全体や他のプロセスを停止しない。結果不明の保存は呼び出し側で自動再送しない。
 
-既存の `note read/write` も `repo-notes-backend` から利用でき、GUI と同じ保存元比較・排他・原子的保存を使う。接続の wire 型は `src-tauri/src/backend.rs` に置き、保存処理をプロトコルへ複製しない。
+既存の `note read/write` も `repo-notes-backend` から利用でき、GUI と同じ保存元比較・排他・原子的保存を使う。接続の wire 型は `src-tauri/src/backend.rs` に置き、保存処理をプロトコルへ複製しない。新規ノートのファイル日付と `created` はバックエンドが動く端末の時刻設定に従う。WSL は通常 Windows のタイムゾーンに追従するが、同期設定やプロセスの `TZ` 上書きによって異なる。
 
 ### スキルのインストール
 
