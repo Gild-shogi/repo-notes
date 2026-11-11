@@ -70,7 +70,7 @@ VS Code での編集と Explorer での場所表示には、選択した Linux �
 
 Windows UI のアンインストールは Windows の「設定」→「アプリ」から行う。今回のサイレントアンインストールでは接続設定が残り、WSL の fixture ノートも保持された。WSL のノートと `~/.local/share/repo-notes/backend/<版>/` は Windows UI と別の場所にあり、この手順には Linux 側データの削除・distro 登録解除を含めない。
 
-macOS は DMG 内の `repo-notes.app` を `/Applications` に配置して起動し、ローカルの既存保存先を使う。macOS 実機での導入・起動・更新は未確認。
+macOS は DMG 内の `repo-notes.app` を `/Applications` に配置して起動し、ローカルの既存保存先を使う。macOS 15.8.2 / Apple Silicon では CI の universal DMG から導入・起動・同版再導入を確認した。Intel・macOS 13・異なる版への更新は未確認。
 
 ## 検証用 CI の設定
 
@@ -80,11 +80,13 @@ macOS は DMG 内の `repo-notes.app` を `/Applications` に配置して起動�
 
 Linux backend・Windows NSIS・macOS universal DMG のビルドと、全成果物の組み立て検証に成功した。Windows `0.1.0` は元の identifier を維持した未変更のインストーラーを使い、Vite を起動せず embedded runtime で実導入を確認した。対象コミット・成果物・合成 fixture・検証条件は [PR #28 の検証証跡](https://github.com/Gild-shogi/repo-notes/pull/28#issuecomment-6776966827) を参照する。
 
+macOS `0.1.0` は [CI run 42934139488](https://github.com/Gild-shogi/repo-notes/actions/runs/42934139488) の未変更 DMG（元コミット `372b370`）を使い、macOS 15.8.2 / Apple Silicon で実導入を確認した。普段用アプリを維持して `/Applications` 内の検証専用フォルダへ配置し、合成ノート専用の `REPO_NOTES_DIR` を指定して、Vite なしで起動した。同版再導入・再起動の前後でノート・メタデータ・ピン等の5ファイルすべての SHA-256 が一致した。取得は `gh run download` であり、ブラウザ取得時の隔離属性を伴う Gatekeeper 判定は検証していない。詳細は [PR #30 の Mac 実機検証証跡](https://github.com/Gild-shogi/repo-notes/pull/30#issuecomment-6789836197) を参照する。
+
 | 対象 | 確認済み | 未確認 |
 |---|---|---|
 | Windows インストーラー・UI | 元 identifier の導入、embedded 起動、CRUD・検索・pin、エージェント書込の監視反映、画像・静的 HTML・Mermaid | 開発ツールが未導入の OS への導入、実際の VS Code / Explorer / 印刷 / クリップボード操作 |
 | 日時表示 | 同じ `created` を WebView の LA 表示 emulation と端末の Asia/Tokyo で表示。OS/WSL 設定は変更していない | 別タイムゾーンの OS 実機 |
 | 再導入・アンインストール | 同版再導入の設定保持、サイレント削除後の WSL fixture 8ファイルの hash 保持。QA 設定だけを限定清掃し、所有プロセス残存0 | 別バージョンへのアップグレード、他の環境でのデータ保持 |
 | WSL 障害・接続先変更 | 版照合・切断・保存再送抑止などの実装と自動検証 | WSL 未導入・再起動からの一連の実復旧、Ubuntu 以外の distro、完全オフライン導入 |
-| macOS | universal DMG のビルド | macOS 13 / Intel / Apple Silicon 実機の導入・起動・CRUD・更新 |
+| macOS | universal DMG のビルド、macOS 15.8.2 / Apple Silicon での導入・embedded 起動・CRUD・CLI 更新の監視反映・本文検索・pin・静的 HTML・Mermaid・同版再導入とデータ保持 | macOS 13 / Intel 実機、異なる版への更新、開発ツール未導入 Mac、ブラウザ取得後の Gatekeeper 判定、画像アセット・外部アプリ・印刷・クリップボードの実操作 |
 | 署名・Release | 未署名の検証用配布に限定する公開 gate | Developer ID / 公証、Windows 署名、タグ起点の実 Draft Release 作成・一般公開 |
