@@ -677,6 +677,7 @@ body {
   .pane-repos,
   .pane-notes,
   .note-actions,
+  .note-view > .pane-status.error,
   .toc,
   .back-to-top {
     display: none !important;
