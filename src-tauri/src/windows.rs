@@ -366,11 +366,10 @@ impl Windows {
                     command
                 },
                 move |notification| {
-                    if view
-                        .lock()
-                        .map(|view| view.connection_id != generation)
-                        .unwrap_or(true)
-                    {
+                    let Ok(mut view) = view.lock() else {
+                        return;
+                    };
+                    if view.connection_id != generation {
                         return;
                     }
                     match notification {
@@ -381,22 +380,16 @@ impl Windows {
                             );
                         }
                         Notification::Event(backend::Event::WatchError { message }) => {
-                            let _ = app_events.emit(
-                                crate::watch::ERROR_EVENT,
-                                serde_json::json!({"message":message}),
-                            );
+                            view.message = Some(format!("ノートの変更監視に失敗しました。接続設定から再接続してください: {message}"));
+                            view.revision += 1;
+                            let _ = app_events.emit(CONNECTION_EVENT, view.clone());
                         }
                         Notification::Disconnected(message) => {
-                            if let Ok(mut view) = view.lock() {
-                                if view.connection_id != generation {
-                                    return;
-                                }
-                                view.state = "disconnected";
-                                view.message = Some(message);
-                                view.external_available = false;
-                                view.revision += 1;
-                                let _ = app_events.emit(CONNECTION_EVENT, view.clone());
-                            }
+                            view.state = "disconnected";
+                            view.message = Some(message);
+                            view.external_available = false;
+                            view.revision += 1;
+                            let _ = app_events.emit(CONNECTION_EVENT, view.clone());
                         }
                     }
                 },
