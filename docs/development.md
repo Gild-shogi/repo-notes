@@ -72,7 +72,7 @@ stdout は応答とイベント専用、診断は stderr に出力する。要�
 
 導入・接続・復旧と確認済みの範囲は [インストーラーの利用手順](installation.md) を参照する。
 
-`v<package.json の version>` タグを起点に `Installer builds` が動く。`package.json`、Cargo package、Tauri config、同梱 backend の版と protocol を照合し、WSL backend・macOS DMG・Windows NSIS の全ビルドが成功してから同じ GitHub Release へ添付する。PR では同じビルドを行って Actions artifact に保存し、Release は作らない。
+`v<version>` タグを起点に `Installer builds` が動き、タグを配布版の正とする。各ジョブは CI 作業コピーの `package.json`、`Cargo.toml`、`Cargo.lock` のアプリ自身の版、Tauri config をタグの版へ揃えてから検証・ビルドする。リポジトリの版を手で更新する必要はなく、依存パッケージの版は変更しない。同梱 backend の版・protocol・ハッシュを照合し、全 OS ビルドの成功後に同じ GitHub Release へ添付する。PR ではリポジトリの版を使って Actions artifact を作り、Release は作らない。
 
 | ビルド対象 | 成果物 | 実行時の構成 |
 |---|---|---|
@@ -94,7 +94,7 @@ Windows の同梱資源は `backend/repo-notes-backend` と `backend/manifest.js
 
 ```bash
 node --test tests/release/release.node-test.ts
-node scripts/release.ts check v0.1.0
+node scripts/release.ts prepare-build --help
 cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
 node scripts/release.ts stage-backend src-tauri/target/x86_64-unknown-linux-musl/release/repo-notes-backend
 node scripts/release.ts package-backend /tmp/repo-notes-backend-release

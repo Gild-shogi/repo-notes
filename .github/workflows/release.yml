@@ -41,7 +41,7 @@ jobs:
       - name: Check release contracts
         run: |
           node --test tests/release/release.node-test.ts
-          node scripts/release.ts check
+          node scripts/release.ts prepare-build
       - name: Install Rust target
         run: rustup toolchain install 1.89.0 --profile minimal --target x86_64-unknown-linux-musl
       - name: Test headless backend
@@ -82,7 +82,7 @@ jobs:
       - name: Install locked frontend dependencies
         run: pnpm install --frozen-lockfile
       - name: Check release contracts
-        run: node scripts/release.ts check
+        run: node scripts/release.ts prepare-build
       - name: Check frontend and agent skill behavior
         run: |
           pnpm exec tsc --noEmit
@@ -129,7 +129,9 @@ jobs:
       - name: Install locked frontend dependencies
         run: pnpm install --frozen-lockfile
       - name: Verify bundled backend
-        run: node scripts/release.ts verify-backend
+        run: |
+          node scripts/release.ts prepare-build
+          node scripts/release.ts verify-backend
       - name: Install Rust target
         run: rustup toolchain install 1.89.0 --profile minimal --target x86_64-pc-windows-msvc
       - name: Build validation installer
@@ -164,7 +166,9 @@ jobs:
           merge-multiple: true
           path: release-artifacts/
       - name: Verify complete release
-        run: node scripts/release.ts prepare-release release-artifacts "$RELEASE_TAG"
+        run: |
+          node scripts/release.ts prepare-build "$RELEASE_TAG"
+          node scripts/release.ts prepare-release release-artifacts "$RELEASE_TAG"
         env:
           RELEASE_TAG: ${{ github.ref_name }}
       - name: Create or refresh Draft Release
