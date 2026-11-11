@@ -1,189 +1,75 @@
-# repo-notes
+<p align="center">
+  <img src="src-tauri/icons/128x128@2x.png" width="96" height="96" alt="repo-notes アイコン" />
+</p>
 
-Gitリポジトリ単位で管理する、AIエージェント用キャッチアップメモアプリ。
+<h1 align="center">repo-notes</h1>
 
-チーム開発中に Claude Code / Codex などのエージェントが書くキャッチアップメモの置き場所を提供する。メモはプロジェクトリポジトリの外（ローカルのデータディレクトリ）に保存され、Tauri 製デスクトップアプリで閲覧・編集できる。
+<p align="center">AI エージェントの調査メモを、リポジトリごとに読む・探す・編集するデスクトップアプリ。</p>
 
-## 構成
+<p align="center">
+  <a href="docs/installation.md">インストーラーの利用手順</a> ·
+  <a href="docs/getting-started.md">ソースからの導入</a> ·
+  <a href="docs/development.md">開発ガイド</a> ·
+  <a href="skill/SKILL.md">エージェント用スキル</a>
+</p>
 
-- **スキル** (`skill/`) — エージェントがメモを書き込むための Claude Code / Codex 用スキル。`resolve-note-dir.sh` が repo-key を導出し、書き込み先ディレクトリを解決する
-- **ビューアアプリ** (`src/`, `src-tauri/`) — Tauri v2 + React。MD/HTML ノートの閲覧、MD ノートの編集・作成・削除、Mermaid・画像・SVG 表示に対応
+![リポジトリ一覧・ノート一覧・Markdown 本文を表示した repo-notes の画面](docs/screenshots/overview.png)
 
-## データディレクトリ
+Claude Code / Codex に調査や実装を任せたあと、その内容を読み返すためのノートアプリです。エージェントがスキルで残したメモを、Git リポジトリごとにまとめて閲覧できます。
 
-`~/.repo-notes/`（環境変数 `REPO_NOTES_DIR` で上書き可）
+ノートはローカルの `~/.repo-notes/` に保存します。プロジェクトの Git リポジトリをメモで増やさず、複数のワークツリーから同じリポジトリのメモを共有できます。
 
-保存先は起動時に作成・正規化し、CRUD・監視・アセット配信・ノートの外部アプリ操作で共有する。相対パスや保存先自体のシンボリックリンクも起動時に解決する。ノート・メタデータ・pins・アセットの I/O はディレクトリ handle を基準に行い、操作途中のリンクすり替えによる領域外への逸脱を拒否する。保存領域内を指す相対シンボリックリンクは利用できる。絶対シンボリックリンクは領域内を指していても利用できない。
+## 主な機能
 
-未作成の一覧・pins は空として扱い、I/O 障害や JSON 破損は画面にエラーを表示する。破損した pins をピン操作で初期化・上書きしない。アセットはアプリ独自の `asset` protocol から同じ保存先の handle で読み込む。設定の asset scope は空で、標準ハンドラーによる別の読み込み経路は許可しない。
+- **リポジトリごとの整理** — リポジトリ・ノート・本文の 3 ペインで、対象を切り替えながら閲覧。
+- **検索とピン留め** — タイトル・タグ・本文から検索し、よく使うリポジトリやノートを固定。
+- **Markdown と図の表示** — コード、表、チェックリスト、Mermaid、画像・SVG、自己完結の静的 HTML に対応。
+- **ノートの作成・編集** — Markdown をアプリ内で編集。別の書き込みと競合した場合は、保存を拒否して下書きを保持。
+- **作業への引き継ぎ** — ノートのパスや Claude 向けの依頼文をコピーし、macOS の外部エディタ・Finder、Windows の VS Code WSL・Explorer で開く操作も可能。
+- **印刷と PDF 保存** — Markdown ノートの本文を出力。
 
-ノート本体を削除できなかった場合は削除失敗を返す。本体の削除後にアセットやピン情報の後処理だけが失敗した場合は、ノートを閉じて後処理の警告を表示する。警告は別のノートを選ぶか、警告の「閉じる」で解除できる。
+## エージェントとノートの利用
 
-```
-~/.repo-notes/
-└── repos/<repo-key>/
-    ├── meta.json               # リポジトリ情報（作成時のみ書き込み・以後不変）
-    └── notes/
-        ├── YYYY-MM-DD-<slug>.md    # 通常のメモ（frontmatter付き）
-        ├── YYYY-MM-DD-<slug>.html  # ビジュアライズ用メモ（自己完結HTML）
-        └── assets/<note-slug>/     # 画像・SVG等のアセット
-```
+1. プロジェクトのリポジトリで、エージェントに「構成を調べて、repo-notes にメモして」と依頼。
+2. アプリでリポジトリとノートを選び、調査内容を確認。
+3. 必要な補足を編集し、次の作業で「前回のメモを読んで進めて」と依頼。
 
-## repo-key 仕様
+アプリとエージェントが同じローカルのノートを読み書きします。導入方法は[導入ガイド](docs/getting-started.md)を参照してください。
 
-ワークツリーを区別せず「Gitリポジトリ」単位でメモを集約するための識別子。
+## Markdown の編集画面
 
-1. `git remote get-url origin` を正規化する
-   - scp 形式（`git@host:path`）→ `host/path`
-   - scheme（`https://` `ssh://` `git://` 等）・userinfo・ポート番号を除去
-   - 末尾の `/` と `.git` を除去、全体を小文字化
-   - 例: `git@github.com:Owner/Repo.git` → `github.com/owner/repo`
-2. origin が無い場合は `git rev-parse --git-common-dir` の実体パスを使う（`local:/abs/path/.git`）。ワークツリーから実行しても共通 git ディレクトリに解決されるため、同一リポジトリに集約される
-3. key は `<slug>--<hash8>`。slug はパス末尾2セグメントの kebab 化（可読性用）、hash8 は正規化文字列の SHA-256 先頭8桁（一意性担保）
-4. origin が後から追加された場合、次回の解決時に `local:` キー配下のメモ（pins.json 含む）が origin ベースの新キーへ自動移行され、meta.json は新キーの内容で再生成される。`--probe` は移行せず、未移行のレガシーディレクトリがあればそちらを返す。新旧両方に実体がある場合は自動では触らない（警告のみ）
+![Markdown ノートをアプリ内で編集し、保存済みの状態を表示した画面](docs/screenshots/editor.png)
 
-導出ロジックは `skill/scripts/resolve-note-dir.sh` に一元化されている。
+編集ボタンで本文を開き、保存ボタンまたは `⌘S` で保存できます。HTML ノートは閲覧専用です。
 
-## メタデータ規約
+画面例はブラウザ開発モードで撮影した架空のサンプルです。[サンプル本文と撮影条件](docs/screenshots/README.md)もリポジトリに含めています。
 
-### MD ノート（frontmatter）
+## クイックスタート
 
-```yaml
----
-title: プロジェクト構成の概要   # 必須
-created: 2026-07-02T10:00:00+09:00  # 必須
-tags: [architecture, onboarding]    # 任意
-agent: claude-code                  # 任意
----
-```
+インストーラーの導入・Windows/WSLの接続・復旧は[インストーラーの利用手順](docs/installation.md)を参照してください。Windows 11 x64 + Ubuntu WSL2、macOS universalのビルドと、実機確認済みの環境を区別して記載しています。未署名の検証用成果物はDraftとして扱います。
 
-パース失敗時はビューアが H1 → ファイル名の順でタイトルにフォールバックする。
-
-### HTML ノート（先頭コメント）
-
-```html
-<!-- repo-notes-meta {"title":"依存グラフ","created":"2026-07-02T10:00:00+09:00","tags":["viz"]} -->
-```
-
-先頭 2KB 以内に無い場合は `<title>` → ファイル名にフォールバック。HTML ノートは**単一ファイル自己完結の静的 HTML** として、インライン CSS と data 画像を利用できる。表示前に DOMPurify で script・link・meta・base・子フレーム等の要素と、リンク・フォーム送信先等の属性を除去する。アプリ所有の文書用 CSP を先頭に置き、権限を付与しない sandbox 付き iframe の srcDoc として表示する。JavaScript はインライン・外部とも実行せず、外部リソースの読み込み・接続の先行確立・外部遷移を禁止する。既存の JavaScript に依存するグラフやフィルタ UI は動作しない。Markdown の Mermaid は引き続き利用できる。
-
-## インストーラーの配布
-
-導入・接続・復旧と確認済みの範囲は [インストーラーの利用手順](docs/installation.md) を参照する。
-
-`v<package.json の version>` タグを起点に `Installer builds` が動く。`package.json`、Cargo package、Tauri config、同梱 backend の版と protocol を照合し、WSL backend・macOS DMG・Windows NSIS の全ビルドが成功してから同じ GitHub Release へ添付する。PR では同じビルドを行って Actions artifact に保存し、Release は作らない。
-
-| ビルド対象 | 成果物 | 実行時の構成 |
-|---|---|---|
-| macOS 13 以降 / Intel・Apple Silicon | universal `.dmg` | ローカルのノート処理 |
-| Windows 11 x64 + 既存 Ubuntu WSL2 | NSIS `.exe` | Windows UI と同梱 Linux backend |
-| WSL Linux x64 | static musl backend `.tar.gz` | 同じ版のエージェント用 CLI / backend |
-
-ビルド対象と実機検証済みの範囲は別であり、下限 OS の導入・更新確認は #22 の証跡を参照する。Windows ARM64、Ubuntu 以外の distro、完全オフライン導入は初回対象外。WebView2 がない環境では Tauri インストーラーが runtime を取得するためネット接続が必要。WSL2 自体は利用者が導入し、アプリは権限昇格・OS 再起動・distro の作成を自動実行しない。
-
-初回の workflow は未署名の検証用成果物を作り、Release を **Draft のまま** にする。macOS は ad-hoc 署名であり Developer ID 署名・公証済みではない。Windows の署名 provider / HSM / 証明書運用は未設定・未検証で、CI に汎用の署名コマンドや新しいクラウド連携を追加していない。署名設定の存在だけでは公開せず、macOS の Developer ID 署名・公証・staple と Windows のアプリ/インストーラー両方の実署名検証が成功するまで一般公開しない。署名方式と CI 設定は別途決定する必要がある。[macOS 署名](https://v2.tauri.app/distribute/sign/macos/)、[Windows 署名](https://v2.tauri.app/distribute/sign/windows/)
-
-Draft の利用には OS の警告やポリシー上の制限がある。Windows Smart App Control 等で未署名アプリが拒否される環境について、保護設定の無効化は案内しない。署名済みの公開版が必要な環境は準備完了まで利用対象にしない。
-
-Windows の同梱資源は `backend/repo-notes-backend` と `backend/manifest.json`。manifest は `version`・`protocolVersion`・`sha256` を持ち、resource と WSL への配備後の双方で照合する。WSL の配置先は選択した Linux ユーザーの `~/.local/share/repo-notes/backend/<version>/` で、ノートとは別に保持する。上書き導入では同じ版の UI/backend を起動し、ノート形式の移行やユーザーノートの削除を行わない。
-
-`SHA256SUMS` と `release-manifest.json` を各配布物と一緒に添付する。公開済み Release の成果物は再実行で置換せず、Draft の再実行だけを更新する。失敗した OS ビルドや版不一致の成果物は一般公開しない。
-
-配布のロジックは Node 24 標準ライブラリの `scripts/release.ts` にまとめている。
+macOS でソースから起動する手順です。Node.js 24 / pnpm 11、Rust、Xcode Command Line Tools が必要です。
 
 ```bash
-node --test tests/release/release.node-test.ts
-node scripts/release.ts check v0.1.0
-cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
-node scripts/release.ts stage-backend src-tauri/target/x86_64-unknown-linux-musl/release/repo-notes-backend
-node scripts/release.ts package-backend /tmp/repo-notes-backend-release
-```
-
-OS 別配布は CI に閉じ、Makefile は `release`・`install-skill`・`test` の3ターゲットを維持する。ローカルの macOS 再配置は `.app` だけをビルドし、GitHub Release の作成とは分ける。今回増えるローカル処理は配布スクリプトの直接実行で足りるため、Just は導入しない。今後ローカルの複数行・OS 別タスクが増えた場合に再比較する。
-
-## 開発
-
-```bash
-mise install          # Node 24 / pnpm 11
+mise install
 pnpm install
-pnpm tauri dev        # 開発起動
-pnpm tauri build      # ビルド
-make release          # 起動中アプリを終了 → ビルド → /Applications へ再配置 → 起動
+pnpm tauri dev
 ```
 
-### テスト
+エージェントからノートを残すには、続けて `make install-skill` で Claude Code / Codex 用のスキルを導入します。ビルドや rulesync を使う場合を含む手順は[導入ガイド](docs/getting-started.md)にまとめています。
 
-```bash
-cargo test --manifest-path src-tauri/Cargo.toml --features backend   # Rust（パーサ・パス検証）
-pnpm test                                          # vitest（URL書き換え）
-pnpm lint                                          # React Hooks recommended
-pnpm test:skill                                    # repo-key導出のshellテスト
-```
+## ドキュメント
 
-### WSL バックエンド
+| ドキュメント | 内容 |
+|---|---|
+| [インストーラーの利用手順](docs/installation.md) | macOS・Windows/WSLの導入、接続、復旧、検証済みの範囲 |
+| [ソースからの導入](docs/getting-started.md) | アプリの起動、スキルの導入、最初のノート |
+| [開発ガイド](docs/development.md) | 構成、ビルド、テスト、デバッグ |
+| [ノート形式](docs/note-format.md) | repo-key の導出、Markdown / HTML のメタデータ、制限事項 |
+| [保存と安全性](docs/storage.md) | 保存先、ファイルアクセス、保存競合、I/O の実行先 |
+| [スクリーンショット](docs/screenshots/README.md) | 公開用画像の撮影条件とサンプル本文 |
 
-GUI ライブラリを使わないバックエンドは、同じ Rust crate の `desktop` feature を外し、`backend` feature を指定してビルドする。Windows 版はインストーラーに同梱した backend を接続時に配置する。以下はバックエンド単体の開発用コマンド。
+## ライセンス
 
-```bash
-cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend
-cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend
-src-tauri/target/debug/repo-notes-backend --help
-src-tauri/target/debug/repo-notes-backend --stdio
-```
-
-`--stdio` は1行1メッセージの JSON 接続。最初に `hello` を送り、UI とバックエンドのアプリ版・プロトコル版が一致した後に操作を受け付ける。不一致なら保存先を開く前に拒否して接続を終了する。`dataRoot` は接続ごとに固定し、省略時は既存の `REPO_NOTES_DIR` または Linux home の `.repo-notes` を使う。シェルの profile は実行しない。
-
-```json
-{"id":1,"method":"hello","appVersion":"0.1.0","protocolVersion":1,"dataRoot":"/tmp/repo-notes-fixture"}
-{"id":2,"method":"list_repos"}
-{"id":3,"method":"shutdown"}
-```
-
-正常応答は `{"type":"response","id":2,"result":...}`、失敗は同じ `id` と `error.kind` を返す。ノートの引数と結果は既存の Tauri コマンドと共通で、引数のキーは `repoKey`・`fileName`・`expectedRaw` などの camelCase。`read_asset` は検証済みアセットの HTTP status・headers・base64 body を返し、Windows 側で WebView の配信応答へ戻す。変更通知は `{"type":"event","event":"changed","repoKeys":[...]}`、監視障害は `event:"watch_error"` と `message` で通知する。初期化時の空 `repoKeys` は全一覧の再取得を表す。
-
-stdout は応答とイベント専用、診断は stderr に出力する。要求の形式不正は `invalidRequest` を返して接続を終了する。保存競合は既存の `conflict`、I/O 失敗は `failure` で通知し、接続は維持する。標準入力の EOF または `shutdown` で所有するバックエンドと監視を終了し、WSL 全体や他のプロセスを停止しない。結果不明の保存は呼び出し側で自動再送しない。
-
-既存の `note read/write` も `repo-notes-backend` から利用でき、GUI と同じ保存元比較・排他・原子的保存を使う。接続の wire 型は `src-tauri/src/backend.rs` に置き、保存処理をプロトコルへ複製しない。新規ノートのファイル日付と `created` はバックエンドが動く端末の時刻設定に従い、画面の日時は閲覧している Windows／macOS のタイムゾーンで表示する。WSL は既定の `useWindowsTimezone=true` で Windows のタイムゾーンへ追従するが、同期設定やプロセスの `TZ` 上書きによって異なる。[WSL の時刻設定](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#time-settings)
-
-### スキルのインストール
-
-```bash
-make install-skill    # ~/.claude/skills/repo-notes と ~/.agents/skills/repo-notes にコピー
-```
-
-`install-skill` は実行内容を表示して `yes` を1回確認した後、既存アプリバイナリをビルドしてスキルの `bin/repo-notes` に同梱する。CIでは `make YES=1 install-skill` を使う。ビルド済み成果物を配る場合は `BUILD_CLI=true APP_BINARY=/path/to/repo-notes` を指定できる。macOS ではアプリのバイナリを使う。Windows/WSL では Windows の GUI バイナリを CLI にせず、接続時に配備した Linux バックエンドを使う。ビルド済み backend を渡せば Node.js/Rust の再ビルドは不要。
-
-WSL の配備済み backend をスキルへコピーする場合は、アプリに表示される版のパスを指定する（以下は `0.1.0`）。カスタム保存先を使う場合は、エージェントの `REPO_NOTES_DIR` と UI の接続先を同じにする。
-
-```bash
-make BUILD_CLI=true APP_BINARY="$HOME/.local/share/repo-notes/backend/0.1.0/repo-notes-backend" install-skill
-```
-
-共通設定をrulesyncで管理する場合、直接インストールしたスキルは `rulesync import --targets claudecode --global --features skills` でソースへ取り込み、`~/claude-dotfiles/` と `setup.sh` による同期を維持する。
-
-## 保存競合の扱い
-
-アプリは編集開始時のraw内容を保存元として送り、現在のファイルと異なる場合は保存を拒否する。下書きと保存結果はアプリ起動中の画面切替後も保持し、破棄と再読込は利用者が明示して行う。保存中の追加入力も未保存として保持する。未保存の下書きはメモリ上にあり、アプリ終了・再起動からの復元は行わない。
-
-エージェントも同じ保存処理の headless `note read/write` を使う（macOS はアプリ、WSL は配備済み backend）。GUIは初期化せず、readのraw出力は改行を加えない。再編集はスナップショットと下書きを別ファイルに保持し、`--expected-file` と `--content-file` を渡す。新規作成は `--new`、事前確認は `--dry-run`、詳細は `repo-notes note write --help` を参照する。競合は終了コード3で通知し、強制上書き・自動マージは行わない。
-
-保存に参加する全mutatorは、保存先の永続lockfileでプロセス間排他を取り、版比較から同じディレクトリでの原子的な公開までを一緒に行う。lockfile自体は削除・置換しない。pinsも同じ排他と原子的保存を使う。公開前の一時ファイルは同期するが、rename後のディレクトリ同期による電源断耐性までは保証しない。
-
-排他を使わない外部エディタ等も、次の保存時のraw比較で既存更新を検出する。ただし比較後から公開までに非参加writerが書き込む競合や、保存先・lockfileを非参加プロセスが入れ替える操作は排他の保証外となる。アプリとエージェントの双方が同じ保存先と保存方法を使う必要がある。
-
-## ファイルI/Oの実行先
-
-一覧・全文検索・ノートCRUD・ピン操作・ローカルファイルの外部起動は非同期のTauriコマンドを入口とし、同期I/Oとロック待機を `spawn_blocking` の実行先で行う。アセットは非同期schemeで要求を受け、同じblocking実行先へ読込を渡し、既存の保存先・配信レスポンスを維持する。起動時に保持した保存先を共有し、各呼び出しで環境変数から解決し直さない。
-
-保存競合と通常の失敗、削除後のcleanup警告は従来の戻り値に保持する。workerが異常終了した場合もコマンドはエラー、assetは500を返す。印刷のようなネイティブUI操作と、メモリ上の保存先取得は同期の入口を維持する。
-
-### デバッグ
-
-- **ブラウザ単体モード**: `pnpm dev` で起動した vite（http://localhost:1420）をブラウザで直接開くと、Tauri APIモック（`src/lib/devMock.ts`、devビルド限定）によりフィクスチャデータでUIを確認できる。レイアウト・Markdown・Mermaid・静的HTML・編集フローの確認に使う。Markdownの画像アセットはasset protocolが無いため表示されない
-- **tauri-mcp**: `cargo install --git https://github.com/dirvine/tauri-mcp` で入る MCP サーバー/CLI。`tauri-mcp tool launch_app '{"app_path":"..."}'` でアプリ起動、`take_screenshot` で画面キャプチャができる（キャプチャには端末アプリへの「画面収録」権限が必要）。macOS では `execute_js` は使えない（WKWebViewがDevToolsのHTTPエンドポイントを持たないため）
-
-## 制限事項
-
-- 外部アプリ起動はノートのパスを検証して OS に渡す。受け取った外部アプリがファイルを開くまでの間の変更は、アプリ内 I/O のディレクトリ handle では制御できない
-- HTML ノートはアプリ内では編集不可（閲覧・削除のみ）。編集は外部エディタで行う
-- 画像アセットのアプリ内アップロードは非対応（エージェントがスキル経由で配置する想定）
+repo-notes のコード・ドキュメント・同梱スキルは [MIT License](LICENSE) で公開しています。
+依存ライブラリにはそれぞれのライセンスが適用されます。[第三者ライセンスと配布条件](docs/licenses.md)を参照してください。

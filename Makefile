@@ -34,6 +34,8 @@ install-skill:
 	mkdir -p "$(CLAUDE_SKILL_DIR)/bin" "$(AGENTS_SKILL_DIR)/bin"
 	cp -R skill/. "$(CLAUDE_SKILL_DIR)/"
 	cp -R skill/. "$(AGENTS_SKILL_DIR)/"
+	cp LICENSE THIRD-PARTY-NOTICES.md "$(CLAUDE_SKILL_DIR)/"
+	cp LICENSE THIRD-PARTY-NOTICES.md "$(AGENTS_SKILL_DIR)/"
 	cp "$(APP_BINARY)" "$(CLAUDE_SKILL_DIR)/bin/$(APP_NAME)"
 	cp "$(APP_BINARY)" "$(AGENTS_SKILL_DIR)/bin/$(APP_NAME)"
 	@echo "installed: $(CLAUDE_SKILL_DIR)"

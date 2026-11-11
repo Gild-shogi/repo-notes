@@ -1,8 +1,9 @@
 [package]
 name = "repo-notes"
 version = "0.1.0"
+license = "MIT"
 description = "A Tauri App"
-authors = ["you"]
+authors = ["Gild-shogi"]
 edition = "2021"
 default-run = "repo-notes"
 
