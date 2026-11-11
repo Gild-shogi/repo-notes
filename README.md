@@ -64,3 +64,8 @@ pnpm tauri dev
 | [ノート形式](docs/note-format.md) | repo-key の導出、Markdown / HTML のメタデータ、制限事項 |
 | [保存と安全性](docs/storage.md) | 保存先、ファイルアクセス、保存競合、I/O の実行先 |
 | [スクリーンショット](docs/screenshots/README.md) | 公開用画像の撮影条件とサンプル本文 |
+
+## ライセンス
+
+repo-notes のコード・ドキュメント・同梱スキルは [MIT License](LICENSE) で公開しています。
+依存ライブラリにはそれぞれのライセンスが適用されます。[第三者ライセンスと配布条件](docs/licenses.md)を参照してください。
