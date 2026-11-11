@@ -40,8 +40,16 @@ pub async fn get_connection(app: AppHandle) -> Result<View, String> {
 }
 
 #[tauri::command]
-pub async fn connect_backend(app: AppHandle, config: Config) -> Result<View, String> {
-    blocking(move || app.state::<Windows>().connect(&app, config)).await
+pub async fn connect_backend(
+    app: AppHandle,
+    config: Config,
+    expected_data_root: Option<String>,
+) -> Result<View, String> {
+    blocking(move || {
+        app.state::<Windows>()
+            .connect(&app, config, expected_data_root.as_deref())
+    })
+    .await
 }
 
 #[tauri::command]

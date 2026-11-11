@@ -319,7 +319,12 @@ impl Windows {
         view.revision += 1;
         Ok(view.clone())
     }
-    pub fn connect(&self, app: &tauri::AppHandle, config: Config) -> Result<View, String> {
+    pub fn connect(
+        &self,
+        app: &tauri::AppHandle,
+        config: Config,
+        expected_data_root: Option<&str>,
+    ) -> Result<View, String> {
         config.validate()?;
         let mut active = self.active.lock().map_err(|e| e.to_string())?;
         active.session.take();
@@ -414,6 +419,9 @@ impl Windows {
                 || hello.home.to_string_lossy() != home
             {
                 return Err("接続したバックエンドの版・WSL・保存先が選択内容と一致しません".into());
+            }
+            if expected_data_root.is_some_and(|root| root != expected_root) {
+                return Err("保存先の参照先が変わりました。元の保存先に戻すか、下書きを破棄してから再接続してください".into());
             }
             let external = execute(&config, false, &["id", "-un"])? == config.user;
             save_config(app, &config)?;

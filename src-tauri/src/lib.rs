@@ -56,7 +56,9 @@ pub fn run() {
                     let handle = app.handle().clone();
                     tauri::async_runtime::spawn(async move {
                         let _ = commands::blocking(move || {
-                            handle.state::<windows::Windows>().connect(&handle, config)
+                            handle
+                                .state::<windows::Windows>()
+                                .connect(&handle, config, None)
                         })
                         .await;
                     });

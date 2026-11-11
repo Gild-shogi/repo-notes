@@ -17,7 +17,8 @@ const call = <T>(command: string, args: Record<string, unknown> = {}): Promise<T
 };
 
 export const getConnection = () => invoke<ConnectionView>("get_connection");
-export const connectBackend = (config: WslConfig) => invoke<ConnectionView>("connect_backend", { config });
+export const connectBackend = (config: WslConfig, expectedDataRoot: string | null) =>
+  invoke<ConnectionView>("connect_backend", { config, expectedDataRoot });
 
 export const getDataRoot = () => call<string>("get_data_root");
 
