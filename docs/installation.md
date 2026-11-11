@@ -68,6 +68,8 @@ VS Code での編集と Explorer での場所表示には、選択した Linux �
 
 更新前に未保存の下書きを保存・退避し、同じ版の UI/backend がそろったインストーラーを使う。再導入後に接続先を確認する。設定が失われた場合も、既存の同じ WSL 保存先を指定する。
 
+アプリ識別子は `io.github.gild-shogi.repo-notes`。旧識別子の検証版から切り替えると、Windows の接続設定と WebView データの保存先が変わるため、WSL の接続設定を再入力する。macOS・WSL のノート本体の保存先は変わらない。以下の旧検証版の実機証跡は、新識別子への切り替え確認を含まない。
+
 Windows UI のアンインストールは Windows の「設定」→「アプリ」から行う。今回のサイレントアンインストールでは接続設定が残り、WSL の fixture ノートも保持された。WSL のノートと `~/.local/share/repo-notes/backend/<版>/` は Windows UI と別の場所にあり、この手順には Linux 側データの削除・distro 登録解除を含めない。
 
 macOS は DMG 内の `repo-notes.app` を `/Applications` に配置して起動し、ローカルの既存保存先を使う。macOS 15.8.2 / Apple Silicon では CI の universal DMG から導入・起動・同版再導入を確認した。Intel・macOS 13・異なる版への更新は未確認。
