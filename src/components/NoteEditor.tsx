@@ -81,7 +81,7 @@ export function NoteEditor({ repoKey, fileName, initialContent }: Props) {
       <div className="editor-toolbar">
         <span className={`editor-status ${dirty ? "dirty" : ""}`}>
           {switchingTarget
-            ? "接続先を変更中…"
+            ? "接続を確認中…"
             : saving
             ? "保存中…"
             : dirty

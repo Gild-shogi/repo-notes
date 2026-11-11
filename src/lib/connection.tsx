@@ -18,7 +18,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState(INITIAL);
   const [targetRevision, setTargetRevision] = useState(0);
   const [switchingTarget, setSwitchingTarget] = useState(false);
-  const { unsaved, discard } = useDraftChanges();
+  const { unsaved, clear } = useDraftChanges();
   const queries = useQueryClient();
   const revision = useRef(-1);
   const connecting = useRef(false);
@@ -49,7 +49,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
       await queries.cancelQueries();
       const next = await connectBackend(config);
       if (changed) {
-        discard();
+        clear();
         queries.clear();
         setTargetRevision((revision) => revision + 1);
       }
@@ -63,7 +63,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
       connecting.current = false;
       setSwitchingTarget(false);
     }
-  }, [view.config, unsaved.length, queries, discard]);
+  }, [view.config, unsaved.length, queries, clear]);
   const value = useMemo(() => ({ view, connect, targetRevision, switchingTarget }), [view, connect, targetRevision, switchingTarget]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

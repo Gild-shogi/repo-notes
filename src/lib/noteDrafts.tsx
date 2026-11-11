@@ -20,6 +20,7 @@ const DraftContext = createContext<{
   update: (key: string, initialContent: string, transition: Transition) => void;
   release: (key: string) => void;
   discard: () => void;
+  clear: () => void;
 } | null>(null);
 
 function initialDraft(content: string): NoteDraft {
@@ -40,8 +41,13 @@ export function NoteDraftProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
-  const discard = useCallback(() => setDrafts({}), []);
-  const value = useMemo(() => ({ drafts, update, release, discard }), [drafts, update, release, discard]);
+  const discard = useCallback(() => {
+    setDrafts((current) => Object.fromEntries(Object.entries(current).map(([key, draft]) => [key, {
+      ...initialDraft(draft.expectedRaw), cleanupWarnings: draft.cleanupWarnings,
+    }])));
+  }, []);
+  const clear = useCallback(() => setDrafts({}), []);
+  const value = useMemo(() => ({ drafts, update, release, discard, clear }), [drafts, update, release, discard, clear]);
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
 }
 
@@ -68,5 +74,5 @@ export function useDraftChanges() {
     const [repoKey, fileName] = JSON.parse(key) as [string, string];
     return { repoKey, fileName };
   });
-  return { unsaved, discard: context.discard };
+  return { unsaved, discard: context.discard, clear: context.clear };
 }
