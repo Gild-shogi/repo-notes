@@ -1,3 +1,5 @@
+#![cfg(any(feature = "desktop", feature = "backend"))]
+
 use std::{
     fs,
     path::Path,
@@ -7,7 +9,11 @@ use std::{
 const KEY: &str = "demo--12345678";
 
 fn cli(root: &Path) -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_repo-notes"));
+    #[cfg(feature = "desktop")]
+    let binary = env!("CARGO_BIN_EXE_repo-notes");
+    #[cfg(not(feature = "desktop"))]
+    let binary = env!("CARGO_BIN_EXE_repo-notes-backend");
+    let mut command = Command::new(binary);
     command.env("REPO_NOTES_DIR", root).args(["note"]);
     command
 }

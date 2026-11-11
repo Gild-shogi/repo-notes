@@ -125,3 +125,8 @@ pub async fn delete_note(
 pub fn print_view(webview_window: tauri::WebviewWindow) -> Result<(), String> {
     webview_window.print().map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn get_connection() -> serde_json::Value {
+    serde_json::json!({"platform":"local","state":"connected","config":null,"dataRoot":null,"home":null,"revision":0,"message":null,"externalAvailable":true,"connectionId":0,"distributions":[]})
+}

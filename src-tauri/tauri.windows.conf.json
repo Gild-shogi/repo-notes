@@ -1,0 +1,14 @@
+{
+  "bundle": {
+    "targets": ["nsis"],
+    "resources": {
+      "resources/backend/repo-notes-backend": "backend/repo-notes-backend",
+      "resources/backend/manifest.json": "backend/manifest.json"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

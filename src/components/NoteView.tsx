@@ -82,7 +82,7 @@ export function NoteView({
   });
 
   if (isLoading) return <div className="pane-status">読み込み中…</div>;
-  if (error || !note) {
+  if (!note) {
     return (
       <div className="pane-status error">ノートを読み込めません: {String(error)}</div>
     );
@@ -95,6 +95,7 @@ export function NoteView({
 
   return (
     <article className={`note-view ${note.kind === "html" ? "note-view--html" : ""}`}>
+      {error && <div className="pane-status error" role="status">最新の内容を確認できません。表示中の内容と下書きを保持しています: {String(error)}</div>}
       <header className="note-header">
         <div className="note-header-row">
           <h1>{note.meta.title}</h1>
@@ -134,8 +135,8 @@ export function NoteView({
             <button
               type="button"
               className="icon-action"
-              title="Finderで表示"
-              aria-label="Finderで表示"
+              title="場所を表示"
+              aria-label="場所を表示"
               onClick={() => open.mutate(true)}
             >
               <FolderIcon />

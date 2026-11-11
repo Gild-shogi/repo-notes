@@ -2,53 +2,61 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use notify::RecursiveMode;
-use notify_debouncer_full::new_debouncer;
-use tauri::{AppHandle, Emitter};
+use notify::{RecommendedWatcher, RecursiveMode};
+use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, RecommendedCache};
+use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "desktop")]
 pub const CHANGED_EVENT: &str = "repo-notes://changed";
+#[cfg(feature = "desktop")]
+pub const ERROR_EVENT: &str = "repo-notes://watch-error";
+pub type Watcher = Debouncer<RecommendedWatcher, RecommendedCache>;
 
-/// データルートを監視し、変更があったリポジトリのキーをフロントへ通知する。
-pub fn spawn(app: AppHandle, root: PathBuf) {
-    std::thread::spawn(move || {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let mut debouncer = match new_debouncer(Duration::from_millis(300), None, tx) {
-            Ok(d) => d,
-            Err(e) => {
-                eprintln!("ファイル監視の初期化に失敗: {e}");
-                return;
-            }
-        };
-        if let Err(e) = debouncer.watch(&root, RecursiveMode::Recursive) {
-            eprintln!("ファイル監視の開始に失敗: {e}");
-            return;
-        }
-
-        // 起動時の一覧取得から監視開始までの変更を拾う。
-        emit_changed(&app, HashSet::new());
-
-        for result in rx {
-            let Ok(events) = result else { continue };
-            let keys: HashSet<String> = events
-                .iter()
-                .flat_map(|e| e.paths.iter())
-                .filter_map(|p| repo_key_of(&root, p))
-                .collect();
-            emit_changed(&app, keys);
-        }
-    });
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(
+    tag = "event",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+pub enum Event {
+    Changed { repo_keys: Vec<String> },
+    WatchError { message: String },
 }
 
-fn emit_changed(app: &AppHandle, repo_keys: HashSet<String>) {
-    let payload = serde_json::json!({
-        "repoKeys": repo_keys.into_iter().collect::<Vec<_>>(),
-    });
-    if let Err(e) = app.emit(CHANGED_EVENT, payload) {
-        eprintln!("変更イベントの送信に失敗: {e}");
-    }
+pub fn spawn(root: PathBuf, notify: impl Fn(Event) + Send + 'static) -> Result<Watcher, String> {
+    let watched = root.clone();
+    let mut debouncer = new_debouncer(
+        Duration::from_millis(300),
+        None,
+        move |result: DebounceEventResult| {
+            let event = match result {
+                Ok(events) => Event::Changed {
+                    repo_keys: events
+                        .iter()
+                        .flat_map(|e| e.paths.iter())
+                        .filter_map(|path| repo_key_of(&watched, path))
+                        .collect::<HashSet<_>>()
+                        .into_iter()
+                        .collect(),
+                },
+                Err(errors) => Event::WatchError {
+                    message: errors
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>()
+                        .join("; "),
+                },
+            };
+            notify(event);
+        },
+    )
+    .map_err(|e| format!("ファイル監視の初期化に失敗しました: {e}"))?;
+    debouncer
+        .watch(&root, RecursiveMode::Recursive)
+        .map_err(|e| format!("ファイル監視の開始に失敗しました: {e}"))?;
+    Ok(debouncer)
 }
 
-/// 変更パスから repos/<repo-key>/ のキー部分を取り出す。
 fn repo_key_of(root: &Path, path: &Path) -> Option<String> {
     let rel = path.strip_prefix(root.join("repos")).ok()?;
     rel.components()

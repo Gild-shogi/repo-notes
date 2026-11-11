@@ -1,0 +1,3 @@
+*.log
+windows-generated.ps1
+__pycache__/

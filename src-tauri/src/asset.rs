@@ -1,5 +1,5 @@
+use http::{Request, Response, StatusCode};
 use std::{io, path::Path};
-use tauri::http::{Request, Response, StatusCode};
 
 use crate::store::DataRoot;
 
@@ -27,7 +27,7 @@ pub fn response(root: &DataRoot, request: Request<Vec<u8>>) -> Response<Vec<u8>>
             io::ErrorKind::PermissionDenied => StatusCode::FORBIDDEN,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         })?;
-        let mime = tauri::utils::mime_type::MimeType::parse(&bytes, &decoded);
+        let mime = tauri_utils::mime_type::MimeType::parse(&bytes, &decoded);
         Ok::<_, StatusCode>((bytes, mime))
     })();
     match loaded {

@@ -46,4 +46,4 @@ jobs:
       - name: Install Rust toolchain
         run: rustup toolchain install 1.89.0 --profile minimal
       - name: Test Rust behavior
-        run: cargo +1.89.0 test --manifest-path src-tauri/Cargo.toml --locked
+        run: cargo +1.89.0 test --manifest-path src-tauri/Cargo.toml --locked --features backend

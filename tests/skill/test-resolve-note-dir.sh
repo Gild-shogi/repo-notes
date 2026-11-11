@@ -94,7 +94,8 @@ fi
 make_repo "$base/collision" "https://github.com/other/project"
 key_dir="$(dirname "$(resolve_dir "$base/collision")")"
 # 別リポジトリのmeta.jsonを同じキー位置に偽装配置して衝突させる
-sed -i '' 's|"canonicalUrl": "github.com/other/project"|"canonicalUrl": "github.com/different/repo"|' "$key_dir/meta.json"
+meta_contents="$(sed 's|"canonicalUrl": "github.com/other/project"|"canonicalUrl": "github.com/different/repo"|' "$key_dir/meta.json")"
+printf '%s\n' "$meta_contents" > "$key_dir/meta.json"
 long_dir="$(resolve_dir "$base/collision")"
 assert_ne "衝突時は別キーに解決される" "$key_dir" "$(dirname "$long_dir")"
 hash_part="$(basename "$(dirname "$long_dir")" | sed 's/.*--//')"

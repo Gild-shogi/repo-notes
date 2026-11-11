@@ -2,7 +2,7 @@
 
 macOS でアプリとエージェント用スキルをソースから導入し、最初のノートを作成する手順。
 
-[アプリ紹介](../README.md) · [開発ガイド](development.md)
+[アプリ紹介](../README.md) · [開発ガイド](development.md) · [インストーラーの利用手順](installation.md)
 
 ## 必要な環境
 
@@ -29,7 +29,13 @@ pnpm tauri dev
 make install-skill    # ~/.claude/skills/repo-notes と ~/.agents/skills/repo-notes にコピー
 ```
 
-`install-skill` は実行内容を表示して `yes` を1回確認した後、既存アプリバイナリをビルドしてスキルの `bin/repo-notes` に同梱する。CIでは `make YES=1 install-skill` を使う。ビルド済み成果物を配る場合は `BUILD_CLI=true APP_BINARY=/path/to/repo-notes` を指定できる。macOSの配布経路を対象とし、WindowsのGUI subsystemを持つバイナリのコンソール対応は別途扱う。
+`install-skill` は実行内容を表示して `yes` を1回確認した後、既存アプリバイナリをビルドしてスキルの `bin/repo-notes` に同梱する。CIでは `make YES=1 install-skill` を使う。ビルド済み成果物を配る場合は `BUILD_CLI=true APP_BINARY=/path/to/repo-notes` を指定できる。macOS ではアプリのバイナリを使う。Windows/WSL では Windows の GUI バイナリを CLI にせず、接続時に配備した Linux バックエンドを使う。ビルド済み backend を渡せば Node.js/Rust の再ビルドは不要。
+
+WSL の配備済み backend をスキルへコピーする場合は、アプリに表示される版のパスを指定する（以下は `0.1.0`）。カスタム保存先を使う場合は、エージェントの `REPO_NOTES_DIR` と UI の接続先を同じにする。
+
+```bash
+make BUILD_CLI=true APP_BINARY="$HOME/.local/share/repo-notes/backend/0.1.0/repo-notes-backend" install-skill
+```
 
 共通設定をrulesyncで管理する場合、直接インストールしたスキルは `rulesync import --targets claudecode --global --features skills` でソースへ取り込み、`~/claude-dotfiles/` と `setup.sh` による同期を維持する。
 

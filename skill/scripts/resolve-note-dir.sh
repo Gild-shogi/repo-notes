@@ -10,7 +10,7 @@
 #         および origin 追加前のローカルキーから origin キーへのメモ移行。
 # --probe 指定時は副作用なしでパス解決のみ行う（読み取り用途）。
 #         未移行のレガシーキーがある場合はそのディレクトリを返す。
-# repo-key 導出仕様は README.md を参照。このスクリプトが唯一の実装。
+# repo-key 導出仕様は docs/note-format.md を参照。このスクリプトが唯一の実装。
 set -euo pipefail
 
 json_output=false
@@ -168,7 +168,9 @@ if [[ -n "$legacy_dir" ]]; then
     rm -f "$meta_file"
     repo_pins="$root/pinned-repos.json"
     if [[ -f "$repo_pins" ]]; then
-      sed -i '' "s|\"$legacy_key\"|\"$key\"|g" "$repo_pins" 2>/dev/null || true
+      pin_update="$(mktemp "$root/.pinned-repos.XXXXXX")"
+      sed "s|\"$legacy_key\"|\"$key\"|g" "$repo_pins" > "$pin_update"
+      mv "$pin_update" "$repo_pins"
     fi
   fi
 fi

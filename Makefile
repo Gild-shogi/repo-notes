@@ -14,7 +14,7 @@ release:
 	-osascript -e 'tell application "$(APP_NAME)" to quit' 2>/dev/null
 	-pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" 2>/dev/null
 	sleep 1
-	pnpm tauri build
+	pnpm tauri build --bundles app
 	rm -rf "$(INSTALL_DIR)/$(APP_NAME).app"
 	cp -R "$(APP_BUNDLE)" "$(INSTALL_DIR)/"
 	open "$(INSTALL_DIR)/$(APP_NAME).app"
@@ -42,7 +42,7 @@ install-skill:
 	@echo "installed: $(AGENTS_SKILL_DIR)"
 
 test:
-	cargo test --manifest-path src-tauri/Cargo.toml
+	cargo test --manifest-path src-tauri/Cargo.toml --features backend
 	bash tests/skill/test-resolve-note-dir.sh
 	bash tests/skill/test-session-start-notes.sh
 	pnpm test

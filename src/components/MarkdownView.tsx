@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import rehypeSlug from "rehype-slug";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { assetSource, useConnection } from "../lib/connection";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { openLocalPath } from "../api";
 import { rewriteAssetUrl } from "../lib/assetUrl";
@@ -52,17 +52,18 @@ function Pre({ children, ...rest }: ComponentProps<"pre">) {
 }
 
 export function MarkdownView({ body, notesDirAbs, onNavigateNote }: Props) {
+  const { view } = useConnection();
   const urlTransform = (url: string, key: string) => {
     if (key === "src") {
-      return rewriteAssetUrl(url, notesDirAbs, convertFileSrc);
+      return rewriteAssetUrl(url, notesDirAbs, (path) => assetSource(path, view));
     }
     // hrefはクリック時にインターセプトして自前で開くため元の値を保持する。
     // ただしblocked対象（javascript:等）はhref自体を無効化する
-    return classifyLink(url, notesDirAbs).type === "blocked" ? "" : url;
+    return classifyLink(url, notesDirAbs, view.home).type === "blocked" ? "" : url;
   };
 
   const handleLinkClick = (href: string) => {
-    const action = classifyLink(href, notesDirAbs);
+    const action = classifyLink(href, notesDirAbs, view.home);
     switch (action.type) {
       case "url":
         void openUrl(action.target);

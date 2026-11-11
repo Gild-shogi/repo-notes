@@ -7,7 +7,8 @@
 <p align="center">AI エージェントの調査メモを、リポジトリごとに読む・探す・編集するデスクトップアプリ。</p>
 
 <p align="center">
-  <a href="docs/getting-started.md">導入ガイド</a> ·
+  <a href="docs/installation.md">インストーラーの利用手順</a> ·
+  <a href="docs/getting-started.md">ソースからの導入</a> ·
   <a href="docs/development.md">開発ガイド</a> ·
   <a href="skill/SKILL.md">エージェント用スキル</a>
 </p>
@@ -24,7 +25,7 @@ Claude Code / Codex に調査や実装を任せたあと、その内容を読み
 - **検索とピン留め** — タイトル・タグ・本文から検索し、よく使うリポジトリやノートを固定。
 - **Markdown と図の表示** — コード、表、チェックリスト、Mermaid、画像・SVG、自己完結の静的 HTML に対応。
 - **ノートの作成・編集** — Markdown をアプリ内で編集。別の書き込みと競合した場合は、保存を拒否して下書きを保持。
-- **作業への引き継ぎ** — ノートのパスや Claude 向けの依頼文をコピーし、外部エディタ・Finder で開く操作も可能。
+- **作業への引き継ぎ** — ノートのパスや Claude 向けの依頼文をコピーし、macOS の外部エディタ・Finder、Windows の VS Code WSL・Explorer で開く操作も可能。
 - **印刷と PDF 保存** — Markdown ノートの本文を出力。
 
 ## エージェントとノートの利用
@@ -45,6 +46,8 @@ Claude Code / Codex に調査や実装を任せたあと、その内容を読み
 
 ## クイックスタート
 
+インストーラーの導入・Windows/WSLの接続・復旧は[インストーラーの利用手順](docs/installation.md)を参照してください。Windows 11 x64 + Ubuntu WSL2、macOS universalのビルドと、実機確認済みの環境を区別して記載しています。未署名の検証用成果物はDraftとして扱います。
+
 macOS でソースから起動する手順です。Node.js 24 / pnpm 11、Rust、Xcode Command Line Tools が必要です。
 
 ```bash
@@ -59,7 +62,8 @@ pnpm tauri dev
 
 | ドキュメント | 内容 |
 |---|---|
-| [導入ガイド](docs/getting-started.md) | アプリの起動、スキルの導入、最初のノート |
+| [インストーラーの利用手順](docs/installation.md) | macOS・Windows/WSLの導入、接続、復旧、検証済みの範囲 |
+| [ソースからの導入](docs/getting-started.md) | アプリの起動、スキルの導入、最初のノート |
 | [開発ガイド](docs/development.md) | 構成、ビルド、テスト、デバッグ |
 | [ノート形式](docs/note-format.md) | repo-key の導出、Markdown / HTML のメタデータ、制限事項 |
 | [保存と安全性](docs/storage.md) | 保存先、ファイルアクセス、保存競合、I/O の実行先 |
