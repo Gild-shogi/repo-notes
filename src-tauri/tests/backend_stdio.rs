@@ -1,3 +1,5 @@
+#![cfg(feature = "backend")]
+
 use std::{
     io::Write,
     path::Path,

@@ -1,3 +1,5 @@
+#![cfg(feature = "backend")]
+
 use repo_notes_lib::{
     backend::{self, Operation},
     session::{Failure, Notification, Session},

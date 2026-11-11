@@ -67,6 +67,38 @@ agent: claude-code                  # 任意
 
 先頭 2KB 以内に無い場合は `<title>` → ファイル名にフォールバック。HTML ノートは**単一ファイル自己完結の静的 HTML** として、インライン CSS と data 画像を利用できる。表示前に DOMPurify で script・link・meta・base・子フレーム等の要素と、リンク・フォーム送信先等の属性を除去する。アプリ所有の文書用 CSP を先頭に置き、権限を付与しない sandbox 付き iframe の srcDoc として表示する。JavaScript はインライン・外部とも実行せず、外部リソースの読み込み・接続の先行確立・外部遷移を禁止する。既存の JavaScript に依存するグラフやフィルタ UI は動作しない。Markdown の Mermaid は引き続き利用できる。
 
+## インストーラーの配布
+
+`v<package.json の version>` タグを起点に `Installer builds` が動く。`package.json`、Cargo package、Tauri config、同梱 backend の版と protocol を照合し、WSL backend・macOS DMG・Windows NSIS の全ビルドが成功してから同じ GitHub Release へ添付する。PR では同じビルドを行って Actions artifact に保存し、Release は作らない。
+
+| ビルド対象 | 成果物 | 実行時の構成 |
+|---|---|---|
+| macOS 13 以降 / Intel・Apple Silicon | universal `.dmg` | ローカルのノート処理 |
+| Windows 11 x64 + 既存 Ubuntu WSL2 | NSIS `.exe` | Windows UI と同梱 Linux backend |
+| WSL Linux x64 | static musl backend `.tar.gz` | 同じ版のエージェント用 CLI / backend |
+
+ビルド対象と実機検証済みの範囲は別であり、下限 OS の導入・更新確認は #22 の証跡を参照する。Windows ARM64、Ubuntu 以外の distro、完全オフライン導入は初回対象外。WebView2 がない環境では Tauri インストーラーが runtime を取得するためネット接続が必要。WSL2 自体は利用者が導入し、アプリは権限昇格・OS 再起動・distro の作成を自動実行しない。
+
+初回の workflow は未署名の検証用成果物を作り、Release を **Draft のまま** にする。macOS は ad-hoc 署名であり Developer ID 署名・公証済みではない。Windows の署名 provider / HSM / 証明書運用は未設定・未検証で、CI に汎用の署名コマンドや新しいクラウド連携を追加していない。署名設定の存在だけでは公開せず、macOS の Developer ID 署名・公証・staple と Windows のアプリ/インストーラー両方の実署名検証が成功するまで一般公開しない。署名方式と CI 設定は別途決定する必要がある。[macOS 署名](https://v2.tauri.app/distribute/sign/macos/)、[Windows 署名](https://v2.tauri.app/distribute/sign/windows/)
+
+Draft の利用には OS の警告やポリシー上の制限がある。Windows Smart App Control 等で未署名アプリが拒否される環境について、保護設定の無効化は案内しない。署名済みの公開版が必要な環境は準備完了まで利用対象にしない。
+
+Windows の同梱資源は `backend/repo-notes-backend` と `backend/manifest.json`。manifest は `version`・`protocolVersion`・`sha256` を持ち、resource と WSL への配備後の双方で照合する。WSL の配置先は選択した Linux ユーザーの `~/.local/share/repo-notes/backend/<version>/` で、ノートとは別に保持する。上書き導入では同じ版の UI/backend を起動し、ノート形式の移行やユーザーノートの削除を行わない。
+
+`SHA256SUMS` と `release-manifest.json` を各配布物と一緒に添付する。公開済み Release の成果物は再実行で置換せず、Draft の再実行だけを更新する。失敗した OS ビルドや版不一致の成果物は一般公開しない。
+
+配布のロジックは Node 24 標準ライブラリの `scripts/release.ts` にまとめている。
+
+```bash
+node --test tests/release/release.node-test.ts
+node scripts/release.ts check v0.1.0
+cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend --release --target x86_64-unknown-linux-musl
+node scripts/release.ts stage-backend src-tauri/target/x86_64-unknown-linux-musl/release/repo-notes-backend
+node scripts/release.ts package-backend /tmp/repo-notes-backend-release
+```
+
+OS 別配布は CI に閉じ、Makefile は `release`・`install-skill`・`test` の3ターゲットを維持する。ローカルの macOS 再配置は `.app` だけをビルドし、GitHub Release の作成とは分ける。今回増えるローカル処理は配布スクリプトの直接実行で足りるため、Just は導入しない。今後ローカルの複数行・OS 別タスクが増えた場合に再比較する。
+
 ## 開発
 
 ```bash
@@ -80,7 +112,7 @@ make release          # 起動中アプリを終了 → ビルド → /Applicati
 ### テスト
 
 ```bash
-cargo test --manifest-path src-tauri/Cargo.toml   # Rust（パーサ・パス検証）
+cargo test --manifest-path src-tauri/Cargo.toml --features backend   # Rust（パーサ・パス検証）
 pnpm test                                          # vitest（URL書き換え）
 pnpm lint                                          # React Hooks recommended
 pnpm test:skill                                    # repo-key導出のshellテスト
@@ -88,11 +120,11 @@ pnpm test:skill                                    # repo-key導出のshellテ�
 
 ### WSL バックエンド
 
-GUI ライブラリを使わないバックエンドは、同じ Rust crate の `desktop` feature を外してビルドする。Windows の接続・配置 UI とインストーラーは後続作業で、現段階では手動の開発用コマンドを提供する。
+GUI ライブラリを使わないバックエンドは、同じ Rust crate の `desktop` feature を外し、`backend` feature を指定してビルドする。Windows 版はインストーラーに同梱した backend を接続時に配置する。以下はバックエンド単体の開発用コマンド。
 
 ```bash
-cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --bin repo-notes-backend
-cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features
+cargo build --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend --bin repo-notes-backend
+cargo test --manifest-path src-tauri/Cargo.toml --locked --no-default-features --features backend
 src-tauri/target/debug/repo-notes-backend --help
 src-tauri/target/debug/repo-notes-backend --stdio
 ```
@@ -109,7 +141,7 @@ src-tauri/target/debug/repo-notes-backend --stdio
 
 stdout は応答とイベント専用、診断は stderr に出力する。要求の形式不正は `invalidRequest` を返して接続を終了する。保存競合は既存の `conflict`、I/O 失敗は `failure` で通知し、接続は維持する。標準入力の EOF または `shutdown` で所有するバックエンドと監視を終了し、WSL 全体や他のプロセスを停止しない。結果不明の保存は呼び出し側で自動再送しない。
 
-既存の `note read/write` も `repo-notes-backend` から利用でき、GUI と同じ保存元比較・排他・原子的保存を使う。接続の wire 型は `src-tauri/src/backend.rs` に置き、保存処理をプロトコルへ複製しない。新規ノートのファイル日付と `created` はバックエンドが動く端末の時刻設定に従う。WSL は通常 Windows のタイムゾーンに追従するが、同期設定やプロセスの `TZ` 上書きによって異なる。
+既存の `note read/write` も `repo-notes-backend` から利用でき、GUI と同じ保存元比較・排他・原子的保存を使う。接続の wire 型は `src-tauri/src/backend.rs` に置き、保存処理をプロトコルへ複製しない。新規ノートのファイル日付と `created` はバックエンドが動く端末の時刻設定に従い、画面の日時は閲覧している Windows／macOS のタイムゾーンで表示する。WSL は既定の `useWindowsTimezone=true` で Windows のタイムゾーンへ追従するが、同期設定やプロセスの `TZ` 上書きによって異なる。[WSL の時刻設定](https://learn.microsoft.com/en-us/windows/wsl/wsl-config#time-settings)
 
 ### スキルのインストール
 
@@ -117,7 +149,13 @@ stdout は応答とイベント専用、診断は stderr に出力する。要�
 make install-skill    # ~/.claude/skills/repo-notes と ~/.agents/skills/repo-notes にコピー
 ```
 
-`install-skill` は実行内容を表示して `yes` を1回確認した後、既存アプリバイナリをビルドしてスキルの `bin/repo-notes` に同梱する。CIでは `make YES=1 install-skill` を使う。ビルド済み成果物を配る場合は `BUILD_CLI=true APP_BINARY=/path/to/repo-notes` を指定できる。macOSの配布経路を対象とし、WindowsのGUI subsystemを持つバイナリのコンソール対応は別途扱う。
+`install-skill` は実行内容を表示して `yes` を1回確認した後、既存アプリバイナリをビルドしてスキルの `bin/repo-notes` に同梱する。CIでは `make YES=1 install-skill` を使う。ビルド済み成果物を配る場合は `BUILD_CLI=true APP_BINARY=/path/to/repo-notes` を指定できる。macOS ではアプリのバイナリを使う。Windows/WSL では Windows の GUI バイナリを CLI にせず、接続時に配備した Linux バックエンドを使う。ビルド済み backend を渡せば Node.js/Rust の再ビルドは不要。
+
+WSL の配備済み backend をスキルへコピーする場合は、アプリに表示される版のパスを指定する（以下は `0.1.0`）。カスタム保存先を使う場合は、エージェントの `REPO_NOTES_DIR` と UI の接続先を同じにする。
+
+```bash
+make BUILD_CLI=true APP_BINARY="$HOME/.local/share/repo-notes/backend/0.1.0/repo-notes-backend" install-skill
+```
 
 共通設定をrulesyncで管理する場合、直接インストールしたスキルは `rulesync import --targets claudecode --global --features skills` でソースへ取り込み、`~/claude-dotfiles/` と `setup.sh` による同期を維持する。
 
@@ -125,7 +163,7 @@ make install-skill    # ~/.claude/skills/repo-notes と ~/.agents/skills/repo-no
 
 アプリは編集開始時のraw内容を保存元として送り、現在のファイルと異なる場合は保存を拒否する。下書きと保存結果はアプリ起動中の画面切替後も保持し、破棄と再読込は利用者が明示して行う。保存中の追加入力も未保存として保持する。未保存の下書きはメモリ上にあり、アプリ終了・再起動からの復元は行わない。
 
-エージェントも同じアプリバイナリのheadless `note read/write` を使う。GUIは初期化せず、readのraw出力は改行を加えない。再編集はスナップショットと下書きを別ファイルに保持し、`--expected-file` と `--content-file` を渡す。新規作成は `--new`、事前確認は `--dry-run`、詳細は `repo-notes note write --help` を参照する。競合は終了コード3で通知し、強制上書き・自動マージは行わない。
+エージェントも同じ保存処理の headless `note read/write` を使う（macOS はアプリ、WSL は配備済み backend）。GUIは初期化せず、readのraw出力は改行を加えない。再編集はスナップショットと下書きを別ファイルに保持し、`--expected-file` と `--content-file` を渡す。新規作成は `--new`、事前確認は `--dry-run`、詳細は `repo-notes note write --help` を参照する。競合は終了コード3で通知し、強制上書き・自動マージは行わない。
 
 保存に参加する全mutatorは、保存先の永続lockfileでプロセス間排他を取り、版比較から同じディレクトリでの原子的な公開までを一緒に行う。lockfile自体は削除・置換しない。pinsも同じ排他と原子的保存を使う。公開前の一時ファイルは同期するが、rename後のディレクトリ同期による電源断耐性までは保証しない。
 

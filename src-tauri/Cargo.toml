@@ -17,6 +17,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
 default = ["desktop"]
+backend = []
 desktop = ["dep:tauri", "dep:tauri-build", "dep:tauri-plugin-opener", "dep:tauri-plugin-clipboard-manager"]
 
 [[bin]]
@@ -27,6 +28,7 @@ required-features = ["desktop"]
 [[bin]]
 name = "repo-notes-backend"
 path = "src/backend_main.rs"
+required-features = ["backend"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [], optional = true }
