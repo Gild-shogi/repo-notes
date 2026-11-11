@@ -120,7 +120,7 @@ if (unique.some(pkg => pkg.name === 'elkjs' && pkg.version !== '0.12.1')) throw 
 const texts = new Map<string, { text: string; sources: Set<string> }>();
 const inventory = unique.map(pkg => {
   const ids = pkg.files.map(file => {
-    const normalized = file.text.replace(/\r\n/g, '\n').trim();
+    const normalized = file.text.replace(/\r\n/g, '\n').replace(/[\t ]+$/gm, '').trim();
     const id = createHash('sha256').update(normalized).digest('hex').slice(0, 16);
     if (!texts.has(id)) texts.set(id, { text: normalized, sources: new Set() });
     texts.get(id)!.sources.add(file.source);
