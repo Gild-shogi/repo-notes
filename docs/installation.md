@@ -28,7 +28,7 @@
 
 UI とエージェントには同じ保存先を指定する。一覧が空なら、WSL の対象 Git リポジトリで既存スキルのメモ作成手順を実行して保存先を初期化し、UI の指定先と照合する。
 
-アプリの導入には Node.js / Rust での再ビルドは不要。エージェント用スキルの導入・更新には、既存の [スキルのインストール手順](../README.md#スキルのインストール) を使う。ソース配布の Makefile がある場所では、配備済み backend を渡して再ビルドせず更新できる（以下は `0.1.0` の例）。
+アプリの導入には Node.js / Rust での再ビルドは不要。エージェント用スキルの導入・更新には、既存の [スキルのインストール手順](getting-started.md#エージェント用スキルのインストール) を使う。ソース配布の Makefile がある場所では、配備済み backend を渡して再ビルドせず更新できる（以下は `0.1.0` の例）。
 
 ```bash
 make BUILD_CLI=true APP_BINARY="$HOME/.local/share/repo-notes/backend/0.1.0/repo-notes-backend" install-skill
