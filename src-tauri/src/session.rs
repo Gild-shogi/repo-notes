@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::{
     collections::HashMap,
     io::{BufRead, BufReader, Write},
-    process::{Child, ChildStdin, Command, Stdio},
+    process::{Child, Command, Stdio},
     sync::{
         atomic::{AtomicU64, Ordering},
         mpsc, Arc, Mutex,
@@ -28,7 +28,7 @@ type Pending = Arc<Mutex<HashMap<u64, mpsc::Sender<Reply>>>>;
 
 pub struct Session {
     child: Child,
-    input: Option<ChildStdin>,
+    input: Option<mpsc::Sender<Vec<u8>>>,
     pending: Pending,
     sequence: AtomicU64,
     disconnected: Arc<Mutex<Option<String>>>,
@@ -45,7 +45,7 @@ impl Session {
             .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| e.to_string())?;
-        let input = child.stdin.take().ok_or("バックエンドの入力を開けません")?;
+        let mut input = child.stdin.take().ok_or("バックエンドの入力を開けません")?;
         let output = child
             .stdout
             .take()
@@ -68,6 +68,26 @@ impl Session {
         });
         let pending: Pending = Arc::new(Mutex::new(HashMap::new()));
         let disconnected = Arc::new(Mutex::new(None));
+        let (outgoing, requests) = mpsc::channel::<Vec<u8>>();
+        let writing = Arc::clone(&pending);
+        let write_status = Arc::clone(&disconnected);
+        thread::spawn(move || {
+            for encoded in requests {
+                if let Err(error) = input
+                    .write_all(&encoded)
+                    .and_then(|()| input.write_all(b"\n"))
+                    .and_then(|()| input.flush())
+                {
+                    if let Ok(mut status) = write_status.lock() {
+                        *status = Some(error.to_string());
+                    }
+                    if let Ok(mut replies) = writing.lock() {
+                        replies.clear();
+                    }
+                    break;
+                }
+            }
+        });
         let waiting = Arc::clone(&pending);
         let status = Arc::clone(&disconnected);
         thread::spawn(move || {
@@ -118,7 +138,7 @@ impl Session {
         });
         Ok(Self {
             child,
-            input: Some(input),
+            input: Some(outgoing),
             pending,
             sequence: AtomicU64::new(1),
             disconnected,
@@ -163,14 +183,9 @@ impl Session {
             })?;
         let result = self
             .input
-            .as_mut()
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::BrokenPipe, "接続がありません"))
-            .and_then(|input| {
-                input
-                    .write_all(&encoded)
-                    .and_then(|()| input.write_all(b"\n"))
-                    .and_then(|()| input.flush())
-            });
+            .as_ref()
+            .ok_or_else(|| "接続がありません".to_owned())
+            .and_then(|input| input.send(encoded).map_err(|error| error.to_string()));
         if let Err(error) = result {
             self.pending
                 .lock()
@@ -181,6 +196,7 @@ impl Session {
                 *status = Some(message.clone());
             }
             self.input.take();
+            let _ = self.child.kill();
             return Err(Failure::Disconnected {
                 message,
                 sent: true,
@@ -199,6 +215,7 @@ impl Session {
                     *status = Some(message.clone());
                 }
                 self.input.take();
+                let _ = self.child.kill();
                 Err(Failure::Disconnected {
                     message,
                     sent: true,
@@ -225,6 +242,45 @@ impl Drop for Session {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    #[cfg(unix)]
+    fn blocked_input_expires_and_marks_the_save_as_indeterminate() {
+        let mut command = Command::new("sh");
+        command.args(["-c", "exec sleep 120"]);
+        let mut session = Session::spawn(command, |_| {}).unwrap();
+        let pid = session.child.id();
+        let (done, result) = mpsc::channel();
+        let worker = thread::spawn(move || {
+            let failed = matches!(
+                session.request(Operation::WriteNote {
+                    repo_key: "fixture".into(),
+                    file_name: "note.md".into(),
+                    content: "x".repeat(1024 * 1024),
+                    expected_raw: String::new(),
+                }),
+                Err(Failure::Disconnected { sent: true, .. })
+            );
+            let cannot_resend = matches!(
+                session.request(Operation::ListRepos),
+                Err(Failure::Disconnected { sent: false, .. })
+            );
+            done.send(failed && cannot_resend).unwrap();
+        });
+        let completed = result.recv_timeout(Duration::from_secs(35));
+        if completed.is_err() {
+            Command::new("kill")
+                .args(["-KILL", &pid.to_string()])
+                .status()
+                .unwrap();
+        }
+        worker.join().unwrap();
+        assert_eq!(
+            completed.ok(),
+            Some(true),
+            "blocked sending must expire within the request timeout"
+        );
+    }
+
     #[test]
     #[cfg(unix)]
     fn disconnected_backend_does_not_receive_a_second_request() {
