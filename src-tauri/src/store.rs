@@ -127,10 +127,10 @@ fn atomic_write(
     }
 }
 
-#[cfg(feature = "desktop")]
+#[cfg(all(feature = "desktop", not(windows)))]
 pub struct StoreState(pub Result<DataRoot, String>);
 
-#[cfg(feature = "desktop")]
+#[cfg(all(feature = "desktop", not(windows)))]
 impl StoreState {
     pub fn get(&self) -> Result<&DataRoot, String> {
         self.0.as_ref().map_err(Clone::clone)

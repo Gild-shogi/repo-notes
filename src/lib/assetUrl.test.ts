@@ -14,6 +14,10 @@ describe("rewriteAssetUrl", () => {
     );
   });
 
+  it("エンコード済みの相対画像を実際のLinuxファイル名へ戻す", () => {
+    expect(rewriteAssetUrl("assets/%E7%94%BB%E5%83%8F%201.svg", notesDir, convert)).toBe(`asset://localhost${notesDir}/assets/画像 1.svg`);
+  });
+
   it("http(s)/data URLはそのまま通す", () => {
     expect(rewriteAssetUrl("https://example.com/a.png", notesDir, convert)).toBe(
       "https://example.com/a.png",

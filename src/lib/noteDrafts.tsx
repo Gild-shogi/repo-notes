@@ -19,6 +19,8 @@ const DraftContext = createContext<{
   drafts: Drafts;
   update: (key: string, initialContent: string, transition: Transition) => void;
   release: (key: string) => void;
+  discard: () => void;
+  clear: () => void;
 } | null>(null);
 
 function initialDraft(content: string): NoteDraft {
@@ -39,7 +41,13 @@ export function NoteDraftProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
-  const value = useMemo(() => ({ drafts, update, release }), [drafts, update, release]);
+  const discard = useCallback(() => {
+    setDrafts((current) => Object.fromEntries(Object.entries(current).map(([key, draft]) => [key, {
+      ...initialDraft(draft.expectedRaw), cleanupWarnings: draft.cleanupWarnings,
+    }])));
+  }, []);
+  const clear = useCallback(() => setDrafts({}), []);
+  const value = useMemo(() => ({ drafts, update, release, discard, clear }), [drafts, update, release, discard, clear]);
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;
 }
 
@@ -55,4 +63,16 @@ export function useNoteDraft(repoKey: string, fileName: string, initialContent: 
     return () => release(key);
   }, [release, key]);
   return [drafts[key] ?? initialDraft(openedContent), transition] as const;
+}
+
+export function useDraftChanges() {
+  const context = useContext(DraftContext);
+  if (!context) throw new Error("NoteDraftProvider is required");
+  const unsaved = Object.entries(context.drafts).filter(([,draft]) =>
+    draft.content !== draft.expectedRaw || draft.operation.kind === "saving" || draft.operation.kind === "reloading" || (draft.operation.kind === "save-error" && draft.operation.error.kind === "indeterminate")
+  ).map(([key]) => {
+    const [repoKey, fileName] = JSON.parse(key) as [string, string];
+    return { repoKey, fileName };
+  });
+  return { unsaved, discard: context.discard, clear: context.clear };
 }
