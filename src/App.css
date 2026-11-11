@@ -652,12 +652,16 @@ body {
 
 /* mermaidブロックを含むpreの装飾はPreコンポーネント側で外している */
 
+.app-shell { height: 100vh; display: flex; flex-direction: column; }
+.app-shell > .layout { flex: 1; height: auto; min-height: 0; }
+
 /* 印刷（ノート本文のみを出力する） */
 @media print {
   body {
     overflow: visible;
   }
 
+  .app-shell,
   .layout {
     display: block;
     height: auto;
@@ -669,6 +673,7 @@ body {
     height: auto;
   }
 
+  .connection-panel,
   .pane-repos,
   .pane-notes,
   .note-actions,
@@ -722,8 +727,6 @@ body {
   min-height: 0;
 }
 
-.app-shell { height: 100vh; display: flex; flex-direction: column; }
-.app-shell > .layout { flex: 1; height: auto; min-height: 0; }
 .connection-panel { flex: 0 0 auto; max-height: 48vh; overflow-y: auto; background: var(--bg-sub); border-bottom: 1px solid var(--border); }
 .connection-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 14px; }
 .connection-bar > span { overflow-wrap: anywhere; }
