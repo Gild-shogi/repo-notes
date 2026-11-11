@@ -93,7 +93,7 @@ function packageBackend(output: string): void {
   const manifest = verifyBackend(backendDir);
   mkdirSync(output, { recursive: true });
   const file = releaseFile("backend", manifest.version);
-  run("tar", ["-czf", resolve(output, file), "-C", backendDir, "repo-notes-backend", "manifest.json"]);
+  run("tar", ["-czf", resolve(output, file), "-C", backendDir, "repo-notes-backend", "manifest.json", "-C", resolve("."), "LICENSE", "THIRD-PARTY-NOTICES.md"]);
   report(output, { ...projectVersion(), platform: "backend", file, sha256: sha256(join(output, file)), backendSha256: manifest.sha256, signed: false, notarized: false });
 }
 

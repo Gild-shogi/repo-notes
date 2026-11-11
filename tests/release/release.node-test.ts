@@ -1,12 +1,41 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const script = resolve("scripts/release.ts");
+
+test("backend archive includes the project license and third-party notices", () => {
+  const root = mkdtempSync(join(tmpdir(), "repo-notes-release-"));
+  try {
+    const backend = join(root, "src-tauri", "resources", "backend");
+    mkdirSync(backend, { recursive: true });
+    mkdirSync(join(root, "src-tauri", "src"));
+    writeFileSync(join(root, "package.json"), JSON.stringify({ version: "0.1.0" }));
+    writeFileSync(join(root, "src-tauri", "tauri.conf.json"), JSON.stringify({ version: "0.1.0" }));
+    writeFileSync(join(root, "src-tauri", "Cargo.toml"), '[package]\nversion = "0.1.0"\n');
+    writeFileSync(join(root, "src-tauri", "src", "backend.rs"), "pub const PROTOCOL_VERSION: u32 = 1;\n");
+    const bytes = Buffer.alloc(64);
+    bytes.write("7f454c460201", "hex");
+    bytes.writeUInt16LE(62, 18);
+    writeFileSync(join(backend, "repo-notes-backend"), bytes);
+    writeFileSync(join(backend, "manifest.json"), JSON.stringify({ version: "0.1.0", protocolVersion: 1, sha256: createHash("sha256").update(bytes).digest("hex") }));
+    for (const file of ["LICENSE", "THIRD-PARTY-NOTICES.md"]) writeFileSync(join(root, file), file + " fixture\n");
+    const packed = spawnSync(process.execPath, [script, "package-backend", "output"], { cwd: root, encoding: "utf8" });
+    assert.equal(packed.status, 0, packed.stderr);
+    const archive = join(root, "output", "repo-notes-backend_0.1.0_linux_x64.tar.gz");
+    for (const file of ["LICENSE", "THIRD-PARTY-NOTICES.md"]) {
+      const extracted = spawnSync("tar", ["-xOzf", archive, file], { encoding: "utf8" });
+      assert.equal(extracted.status, 0, extracted.stderr);
+      assert.equal(extracted.stdout, readFileSync(join(root, file), "utf8"));
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test("release check rejects mismatched app versions before staging a backend", () => {
   const root = mkdtempSync(join(tmpdir(), "repo-notes-release-"));
