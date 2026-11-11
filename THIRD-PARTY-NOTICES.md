@@ -644,6 +644,7 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | @marijn/find-cluster-break | 1.0.4 | MIT | [Source](https://registry.npmjs.org/@marijn/find-cluster-break/-/find-cluster-break-1.0.4.tgz) | [081220319c27e924](#license-081220319c27e924) |
 | npm | @mermaid-js/parser | 2.0.1 | MIT | [Source](https://registry.npmjs.org/@mermaid-js/parser/-/parser-2.0.1.tgz) | [d872b89e34b79451](#license-d872b89e34b79451) |
 | npm | @oxc-project/types | 0.156.0 | MIT | [Source](https://registry.npmjs.org/@oxc-project/types/-/types-0.156.0.tgz) | [5b0650b078309ba2](#license-5b0650b078309ba2) |
+| npm | @oxlint/binding-darwin-arm64 | 1.93.0 | MIT | [Source](https://registry.npmjs.org/@oxlint/binding-darwin-arm64/-/binding-darwin-arm64-1.93.0.tgz) | [5b0650b078309ba2](#license-5b0650b078309ba2) |
 | npm | @rolldown/binding-darwin-arm64 | 1.2.16 | MIT | [Source](https://registry.npmjs.org/@rolldown/binding-darwin-arm64/-/binding-darwin-arm64-1.2.16.tgz) | [93a675c915fd5846](#license-93a675c915fd5846) |
 | npm | @rolldown/pluginutils | 1.0.1 | MIT | [Source](https://registry.npmjs.org/@rolldown/pluginutils/-/pluginutils-1.0.1.tgz) | [3a2bf91a2d9811ef](#license-3a2bf91a2d9811ef) |
 | npm | @tanstack/query-core | 5.101.2 | MIT | [Source](https://registry.npmjs.org/@tanstack/query-core/-/query-core-5.101.2.tgz) | [277d2a8e459713d6](#license-277d2a8e459713d6) |
@@ -701,13 +702,6 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | @types/trusted-types | 2.0.7 | MIT | [Source](https://registry.npmjs.org/@types/trusted-types/-/trusted-types-2.0.7.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
 | npm | @types/unist | 2.0.11 | MIT | [Source](https://registry.npmjs.org/@types/unist/-/unist-2.0.11.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
 | npm | @types/unist | 3.0.3 | MIT | [Source](https://registry.npmjs.org/@types/unist/-/unist-3.0.3.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
-| npm | @typescript-eslint/parser | 8.72.1 | MIT | [Source](https://registry.npmjs.org/@typescript-eslint/parser/-/parser-8.72.1.tgz) | [b263be8715c216f3](#license-b263be8715c216f3) |
-| npm | @typescript-eslint/project-service | 8.72.1 | MIT | [Source](https://registry.npmjs.org/@typescript-eslint/project-service/-/project-service-8.72.1.tgz) | [51e9b6529a4575fa](#license-51e9b6529a4575fa) |
-| npm | @typescript-eslint/scope-manager | 8.72.1 | MIT | [Source](https://registry.npmjs.org/@typescript-eslint/scope-manager/-/scope-manager-8.72.1.tgz) | [b263be8715c216f3](#license-b263be8715c216f3) |
-| npm | @typescript-eslint/tsconfig-utils | 8.72.1 | MIT | [Source](https://registry.npmjs.org/@typescript-eslint/tsconfig-utils/-/tsconfig-utils-8.72.1.tgz) | [51e9b6529a4575fa](#license-51e9b6529a4575fa) |
-| npm | @typescript-eslint/types | 8.72.1 | MIT | [Source](https://registry.npmjs.org/@typescript-eslint/types/-/types-8.72.1.tgz) | [b263be8715c216f3](#license-b263be8715c216f3) |
-| npm | @typescript-eslint/typescript-estree | 8.72.1 | MIT | [Source](https://registry.npmjs.org/@typescript-eslint/typescript-estree/-/typescript-estree-8.72.1.tgz) | [b263be8715c216f3](#license-b263be8715c216f3) |
-| npm | @typescript-eslint/visitor-keys | 8.72.1 | MIT | [Source](https://registry.npmjs.org/@typescript-eslint/visitor-keys/-/visitor-keys-8.72.1.tgz) | [b263be8715c216f3](#license-b263be8715c216f3) |
 | npm | @uiw/codemirror-extensions-basic-setup | 4.25.12 | MIT | [Source](https://registry.npmjs.org/@uiw/codemirror-extensions-basic-setup/-/codemirror-extensions-basic-setup-4.25.12.tgz) | [7098bc2a303d1786](#license-7098bc2a303d1786) |
 | npm | @uiw/react-codemirror | 4.25.12 | MIT | [Source](https://registry.npmjs.org/@uiw/react-codemirror/-/react-codemirror-4.25.12.tgz) | [7098bc2a303d1786](#license-7098bc2a303d1786) |
 | npm | @ungap/structured-clone | 1.3.2 | ISC | [Source](https://registry.npmjs.org/@ungap/structured-clone/-/structured-clone-1.3.2.tgz) | [22fc2b0e60ba1aba](#license-22fc2b0e60ba1aba) |
@@ -925,6 +919,7 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | node-releases | 2.0.63 | MIT | [Source](https://registry.npmjs.org/node-releases/-/node-releases-2.0.63.tgz) | [b02a61dfa2f1ba35](#license-b02a61dfa2f1ba35) |
 | npm | obug | 3.0.0 | MIT | [Source](https://registry.npmjs.org/obug/-/obug-3.0.0.tgz) | [e200d5c2b112f030](#license-e200d5c2b112f030) |
 | npm | optionator | 0.9.4 | MIT | [Source](https://registry.npmjs.org/optionator/-/optionator-0.9.4.tgz) | [0e677f246e846898](#license-0e677f246e846898) |
+| npm | oxlint | 1.93.0 | MIT | [Source](https://registry.npmjs.org/oxlint/-/oxlint-1.93.0.tgz) | [5b0650b078309ba2](#license-5b0650b078309ba2) |
 | npm | p-limit | 3.1.0 | MIT | [Source](https://registry.npmjs.org/p-limit/-/p-limit-3.1.0.tgz) | [1529f88b36750950](#license-1529f88b36750950) |
 | npm | p-locate | 5.0.0 | MIT | [Source](https://registry.npmjs.org/p-locate/-/p-locate-5.0.0.tgz) | [1529f88b36750950](#license-1529f88b36750950) |
 | npm | package-manager-detector | 1.9.0 | MIT | [Source](https://registry.npmjs.org/package-manager-detector/-/package-manager-detector-1.9.0.tgz) | [ac1f2978a646f2d4](#license-ac1f2978a646f2d4) |
@@ -957,7 +952,6 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | safer-buffer | 2.1.2 | MIT | [Source](https://registry.npmjs.org/safer-buffer/-/safer-buffer-2.1.2.tgz) | [aa72fb6117e42379](#license-aa72fb6117e42379) |
 | npm | scheduler | 0.27.0 | MIT | [Source](https://registry.npmjs.org/scheduler/-/scheduler-0.27.0.tgz) | [cf9b17822d1fcd4f](#license-cf9b17822d1fcd4f) |
 | npm | semver | 6.3.1 | ISC | [Source](https://registry.npmjs.org/semver/-/semver-6.3.1.tgz) | [0ae52fe329ccfd23](#license-0ae52fe329ccfd23) |
-| npm | semver | 7.8.6 | ISC | [Source](https://registry.npmjs.org/semver/-/semver-7.8.6.tgz) | [0ae52fe329ccfd23](#license-0ae52fe329ccfd23) |
 | npm | shebang-command | 2.0.0 | MIT | [Source](https://registry.npmjs.org/shebang-command/-/shebang-command-2.0.0.tgz) | [1407925f61282a6b](#license-1407925f61282a6b) |
 | npm | shebang-regex | 3.0.0 | MIT | [Source](https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz) | [c9808a775260db56](#license-c9808a775260db56) |
 | npm | source-map-js | 1.2.2 | BSD-3-Clause | [Source](https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.2.tgz) | [6ead954f96723337](#license-6ead954f96723337) |
@@ -973,7 +967,6 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | tinyglobby | 0.2.17 | MIT | [Source](https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz) | [4918b99deb04bad7](#license-4918b99deb04bad7) |
 | npm | trim-lines | 3.0.1 | MIT | [Source](https://registry.npmjs.org/trim-lines/-/trim-lines-3.0.1.tgz) | [4be46afa7981dcef](#license-4be46afa7981dcef) |
 | npm | trough | 2.2.0 | MIT | [Source](https://registry.npmjs.org/trough/-/trough-2.2.0.tgz) | [e1da326aaf68bf80](#license-e1da326aaf68bf80) |
-| npm | ts-api-utils | 2.5.0 | MIT | [Source](https://registry.npmjs.org/ts-api-utils/-/ts-api-utils-2.5.0.tgz) | [c19039068c591031](#license-c19039068c591031) |
 | npm | ts-dedent | 2.3.0 | MIT | [Source](https://registry.npmjs.org/ts-dedent/-/ts-dedent-2.3.0.tgz) | [1078bbb5b87d7787](#license-1078bbb5b87d7787) |
 | npm | type-check | 0.4.0 | MIT | [Source](https://registry.npmjs.org/type-check/-/type-check-0.4.0.tgz) | [0e677f246e846898](#license-0e677f246e846898) |
 | npm | typescript | 5.8.3 | Apache-2.0 | [Source](https://registry.npmjs.org/typescript/-/typescript-5.8.3.tgz) | [c5217b0544ea9c91](#license-c5217b0544ea9c91) |
@@ -1423,7 +1416,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 - https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz — LICENSE
 - https://registry.npmjs.org/lru-cache/-/lru-cache-5.1.1.tgz — LICENSE
 - https://registry.npmjs.org/semver/-/semver-6.3.1.tgz — LICENSE
-- https://registry.npmjs.org/semver/-/semver-7.8.6.tgz — LICENSE
 - https://registry.npmjs.org/which/-/which-2.0.2.tgz — LICENSE
 - https://registry.npmjs.org/yallist/-/yallist-3.1.1.tgz — LICENSE
 
@@ -11620,37 +11612,6 @@ extern_protocol!(
 );
 ```
 
-<a id="license-51e9b6529a4575fa"></a>
-
-### 51e9b6529a4575fa
-
-- https://registry.npmjs.org/@typescript-eslint/project-service/-/project-service-8.72.1.tgz — LICENSE
-- https://registry.npmjs.org/@typescript-eslint/tsconfig-utils/-/tsconfig-utils-8.72.1.tgz — LICENSE
-
-```text
-MIT License
-
-Copyright (c) 2025 typescript-eslint and other contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 <a id="license-51f778ffff2c0705"></a>
 
 ### 51f778ffff2c0705
@@ -11900,6 +11861,7 @@ DEALINGS IN THE SOFTWARE.
 ### 5b0650b078309ba2
 
 - https://registry.npmjs.org/@oxc-project/types/-/types-0.156.0.tgz — LICENSE
+- https://registry.npmjs.org/oxlint/-/oxlint-1.93.0.tgz — LICENSE
 
 ```text
 MIT License
@@ -21428,40 +21390,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-<a id="license-b263be8715c216f3"></a>
-
-### b263be8715c216f3
-
-- https://registry.npmjs.org/@typescript-eslint/parser/-/parser-8.72.1.tgz — LICENSE
-- https://registry.npmjs.org/@typescript-eslint/scope-manager/-/scope-manager-8.72.1.tgz — LICENSE
-- https://registry.npmjs.org/@typescript-eslint/types/-/types-8.72.1.tgz — LICENSE
-- https://registry.npmjs.org/@typescript-eslint/typescript-estree/-/typescript-estree-8.72.1.tgz — LICENSE
-- https://registry.npmjs.org/@typescript-eslint/visitor-keys/-/visitor-keys-8.72.1.tgz — LICENSE
-
-```text
-MIT License
-
-Copyright (c) 2019 typescript-eslint and other contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 <a id="license-b2f2bd6cbc1bfc7a"></a>
 
 ### b2f2bd6cbc1bfc7a
@@ -22301,35 +22229,6 @@ HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
-```
-
-<a id="license-c19039068c591031"></a>
-
-### c19039068c591031
-
-- https://registry.npmjs.org/ts-api-utils/-/ts-api-utils-2.5.0.tgz — LICENSE.md
-
-```text
-# MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-'Software'), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
 <a id="license-c193d216d646a101"></a>

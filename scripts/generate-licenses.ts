@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 type LicenseFile = { source: string; text: string };
 type Package = { ecosystem: string; name: string; version: string; license: string; source: string; files: LicenseFile[] };
-type Manifest = { name: string; version: string; license?: string; dependencies?: Record<string, string>; optionalDependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+type Manifest = { name: string; version: string; license?: string; dependencies?: Record<string, string>; optionalDependencies?: Record<string, string>; devDependencies?: Record<string, string>; peerDependencies?: Record<string, string>; peerDependenciesMeta?: Record<string, { optional?: boolean }> };
 type Crate = { name: string; version: string; license: string | null; source: string | null; manifest_path: string };
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -75,11 +75,11 @@ function visitPackage(directory: string) {
 }
 
 function visitDependencies(directory: string, manifest: Manifest, includeDev = false) {
-  const required = { ...manifest.dependencies, ...(includeDev ? manifest.devDependencies : {}) };
+  const required = { ...manifest.peerDependencies, ...manifest.dependencies, ...(includeDev ? manifest.devDependencies : {}) };
   for (const name of Object.keys({ ...required, ...manifest.optionalDependencies }).sort()) {
     const dependency = resolvePackage(directory, name);
     if (dependency) visitPackage(dependency);
-    else if (!(name in (manifest.optionalDependencies ?? {}))) throw new Error(`Missing dependency: ${manifest.name} -> ${name}. Run pnpm install --frozen-lockfile.`);
+    else if (!(name in (manifest.optionalDependencies ?? {})) && !manifest.peerDependenciesMeta?.[name]?.optional) throw new Error(`Missing dependency: ${manifest.name} -> ${name}. Run pnpm install --frozen-lockfile.`);
   }
 }
 visitDependencies(root, readJson(join(root, 'package.json')), true);
@@ -105,7 +105,11 @@ for (const crate of metadata.packages.filter(crate => crate.source)) {
 const unique = [...new Map(packages.map(pkg => [`${pkg.ecosystem}:${pkg.name}@${pkg.version}`, pkg])).values()]
   .sort((a, b) => `${a.ecosystem}:${a.name}@${a.version}`.localeCompare(`${b.ecosystem}:${b.name}@${b.version}`, 'en'));
 for (const pkg of unique.filter(pkg => pkg.ecosystem === 'npm' && pkg.files.length === 0)) {
-  const parent = pkg.name.startsWith('@rolldown/binding-') ? 'rolldown' : pkg.name.startsWith('@tauri-apps/cli-') ? '@tauri-apps/cli' : undefined;
+  const parent = [
+    ['@rolldown/binding-', 'rolldown'],
+    ['@oxlint/binding-', 'oxlint'],
+    ['@tauri-apps/cli-', '@tauri-apps/cli'],
+  ].find(([prefix]) => pkg.name.startsWith(prefix))?.[1];
   if (parent) pkg.files.push(...(unique.find(candidate => candidate.ecosystem === 'npm' && candidate.name === parent && candidate.version === pkg.version)?.files ?? []));
   if (pkg.name === '@humanfs/types') pkg.files.push(...(unique.find(candidate => candidate.ecosystem === 'npm' && candidate.name === '@humanfs/core')?.files ?? []));
 }

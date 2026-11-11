@@ -31,7 +31,7 @@ pnpm licenses:generate
 pnpm licenses:check
 ```
 
-`scripts/generate-licenses.ts` は、導入済み npm 依存を直接・推移・開発依存までたどり、Cargo のロック済み依存を全ターゲット・ビルド・開発依存込みで取得する。npm の他 OS 向けなど未導入の optional dependencies は対象外。一覧は配布物の実際の構成を断定するものではなく、対象環境の依存を広めに収録したもの。
+`scripts/generate-licenses.ts` は、導入済み npm の直接・推移・開発・peer 依存を収録する。Cargo はロック済みの全ターゲット・ビルド・開発依存を取得する。npm の他 OS 向けなど未導入の optional dependencies は対象外。一覧は配布物の実際の構成を断定するものではなく、対象環境の依存を広めに収録したもの。
 
 本文が配布パッケージに無い依存先は、公式リポジトリから取得した原文と固定リビジョンの出典を `scripts/license-supplements.json` に保存する。バージョン情報に VCS リビジョンが無い `tao-macros` などは、取得時の公式ソースのリビジョンを記録する。`natural-compare` は README が指定する著作者のライセンス URL の原文を保存する。ネイティブパッケージは同じバージョンの親パッケージ、`@humanfs/types` は同じ公式リポジトリの `@humanfs/core` の Apache-2.0 本文を収録する。更新時に不足があれば生成を失敗させるので、原文を確認して補足データを更新する。
 
