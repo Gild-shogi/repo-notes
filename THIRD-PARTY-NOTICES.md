@@ -644,13 +644,13 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | @marijn/find-cluster-break | 1.0.4 | MIT | [Source](https://registry.npmjs.org/@marijn/find-cluster-break/-/find-cluster-break-1.0.4.tgz) | [081220319c27e924](#license-081220319c27e924) |
 | npm | @mermaid-js/parser | 2.0.1 | MIT | [Source](https://registry.npmjs.org/@mermaid-js/parser/-/parser-2.0.1.tgz) | [d872b89e34b79451](#license-d872b89e34b79451) |
 | npm | @oxc-project/types | 0.156.0 | MIT | [Source](https://registry.npmjs.org/@oxc-project/types/-/types-0.156.0.tgz) | [5b0650b078309ba2](#license-5b0650b078309ba2) |
-| npm | @oxlint/binding-darwin-arm64 | 1.93.0 | MIT | [Source](https://registry.npmjs.org/@oxlint/binding-darwin-arm64/-/binding-darwin-arm64-1.93.0.tgz) | [5b0650b078309ba2](#license-5b0650b078309ba2) |
-| npm | @rolldown/binding-darwin-arm64 | 1.2.16 | MIT | [Source](https://registry.npmjs.org/@rolldown/binding-darwin-arm64/-/binding-darwin-arm64-1.2.16.tgz) | [93a675c915fd5846](#license-93a675c915fd5846) |
+| npm | @oxlint/binding-linux-x64-gnu | 1.93.0 | MIT | [Source](https://registry.npmjs.org/@oxlint/binding-linux-x64-gnu/-/binding-linux-x64-gnu-1.93.0.tgz) | [5b0650b078309ba2](#license-5b0650b078309ba2) |
+| npm | @rolldown/binding-linux-x64-gnu | 1.2.16 | MIT | [Source](https://registry.npmjs.org/@rolldown/binding-linux-x64-gnu/-/binding-linux-x64-gnu-1.2.16.tgz) | [93a675c915fd5846](#license-93a675c915fd5846) |
 | npm | @rolldown/pluginutils | 1.0.1 | MIT | [Source](https://registry.npmjs.org/@rolldown/pluginutils/-/pluginutils-1.0.1.tgz) | [3a2bf91a2d9811ef](#license-3a2bf91a2d9811ef) |
 | npm | @tanstack/query-core | 5.101.2 | MIT | [Source](https://registry.npmjs.org/@tanstack/query-core/-/query-core-5.101.2.tgz) | [277d2a8e459713d6](#license-277d2a8e459713d6) |
 | npm | @tanstack/react-query | 5.101.2 | MIT | [Source](https://registry.npmjs.org/@tanstack/react-query/-/react-query-5.101.2.tgz) | [277d2a8e459713d6](#license-277d2a8e459713d6) |
 | npm | @tauri-apps/api | 2.11.1 | Apache-2.0 OR MIT | [Source](https://registry.npmjs.org/@tauri-apps/api/-/api-2.11.1.tgz) | [4bf96504d6e83ce5](#license-4bf96504d6e83ce5), [89ff9689dcf9dd53](#license-89ff9689dcf9dd53) |
-| npm | @tauri-apps/cli-darwin-arm64 | 2.11.4 | Apache-2.0 OR MIT | [Source](https://registry.npmjs.org/@tauri-apps/cli-darwin-arm64/-/cli-darwin-arm64-2.11.4.tgz) | [4bf96504d6e83ce5](#license-4bf96504d6e83ce5), [89ff9689dcf9dd53](#license-89ff9689dcf9dd53) |
+| npm | @tauri-apps/cli-linux-x64-gnu | 2.11.4 | Apache-2.0 OR MIT | [Source](https://registry.npmjs.org/@tauri-apps/cli-linux-x64-gnu/-/cli-linux-x64-gnu-2.11.4.tgz) | [4bf96504d6e83ce5](#license-4bf96504d6e83ce5), [89ff9689dcf9dd53](#license-89ff9689dcf9dd53) |
 | npm | @tauri-apps/cli | 2.11.4 | Apache-2.0 OR MIT | [Source](https://registry.npmjs.org/@tauri-apps/cli/-/cli-2.11.4.tgz) | [4bf96504d6e83ce5](#license-4bf96504d6e83ce5), [89ff9689dcf9dd53](#license-89ff9689dcf9dd53) |
 | npm | @tauri-apps/plugin-clipboard-manager | 2.3.2 | MIT OR Apache-2.0 | [Source](https://registry.npmjs.org/@tauri-apps/plugin-clipboard-manager/-/plugin-clipboard-manager-2.3.2.tgz) | [eb8a6c84630461b3](#license-eb8a6c84630461b3) |
 | npm | @tauri-apps/plugin-opener | 2.5.4 | MIT OR Apache-2.0 | [Source](https://registry.npmjs.org/@tauri-apps/plugin-opener/-/plugin-opener-2.5.4.tgz) | [eb8a6c84630461b3](#license-eb8a6c84630461b3) |
@@ -697,6 +697,7 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | @types/json-schema | 7.0.15 | MIT | [Source](https://registry.npmjs.org/@types/json-schema/-/json-schema-7.0.15.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
 | npm | @types/mdast | 4.0.4 | MIT | [Source](https://registry.npmjs.org/@types/mdast/-/mdast-4.0.4.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
 | npm | @types/ms | 2.1.0 | MIT | [Source](https://registry.npmjs.org/@types/ms/-/ms-2.1.0.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
+| npm | @types/node | 25.9.9 | MIT | [Source](https://registry.npmjs.org/@types/node/-/node-25.9.9.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
 | npm | @types/react-dom | 19.2.3 | MIT | [Source](https://registry.npmjs.org/@types/react-dom/-/react-dom-19.2.3.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
 | npm | @types/react | 19.2.17 | MIT | [Source](https://registry.npmjs.org/@types/react/-/react-19.2.17.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
 | npm | @types/trusted-types | 2.0.7 | MIT | [Source](https://registry.npmjs.org/@types/trusted-types/-/trusted-types-2.0.7.tgz) | [ff82c90f84945c60](#license-ff82c90f84945c60) |
@@ -814,7 +815,6 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | find-up | 5.0.0 | MIT | [Source](https://registry.npmjs.org/find-up/-/find-up-5.0.0.tgz) | [1529f88b36750950](#license-1529f88b36750950) |
 | npm | flat-cache | 6.1.23 | MIT | [Source](https://registry.npmjs.org/flat-cache/-/flat-cache-6.1.23.tgz) | [fb743f679e11da3b](#license-fb743f679e11da3b) |
 | npm | flatted | 3.4.4 | ISC | [Source](https://registry.npmjs.org/flatted/-/flatted-3.4.4.tgz) | [832f8f5ac5080c77](#license-832f8f5ac5080c77) |
-| npm | fsevents | 2.3.3 | MIT | [Source](https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz) | [4cdb9a53bdd8ef82](#license-4cdb9a53bdd8ef82) |
 | npm | gensync | 1.0.0-beta.2 | MIT | [Source](https://registry.npmjs.org/gensync/-/gensync-1.0.0-beta.2.tgz) | [3773506139d97ae1](#license-3773506139d97ae1) |
 | npm | github-slugger | 2.0.0 | ISC | [Source](https://registry.npmjs.org/github-slugger/-/github-slugger-2.0.0.tgz) | [c52012f8f02eac31](#license-c52012f8f02eac31) |
 | npm | glob-parent | 6.0.2 | ISC | [Source](https://registry.npmjs.org/glob-parent/-/glob-parent-6.0.2.tgz) | [25a567ead23ed18d](#license-25a567ead23ed18d) |
@@ -858,7 +858,7 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | layout-base | 1.0.2 | MIT | [Source](https://registry.npmjs.org/layout-base/-/layout-base-1.0.2.tgz) | [6dfc8a41d27c6bfd](#license-6dfc8a41d27c6bfd) |
 | npm | layout-base | 2.0.1 | MIT | [Source](https://registry.npmjs.org/layout-base/-/layout-base-2.0.1.tgz) | [6dfc8a41d27c6bfd](#license-6dfc8a41d27c6bfd) |
 | npm | levn | 0.4.1 | MIT | [Source](https://registry.npmjs.org/levn/-/levn-0.4.1.tgz) | [0e677f246e846898](#license-0e677f246e846898) |
-| npm | lightningcss-darwin-arm64 | 1.33.0 | MPL-2.0 | [Source](https://registry.npmjs.org/lightningcss-darwin-arm64/-/lightningcss-darwin-arm64-1.33.0.tgz) | [5c8fb0796b67b431](#license-5c8fb0796b67b431) |
+| npm | lightningcss-linux-x64-gnu | 1.33.0 | MPL-2.0 | [Source](https://registry.npmjs.org/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.33.0.tgz) | [5c8fb0796b67b431](#license-5c8fb0796b67b431) |
 | npm | lightningcss | 1.33.0 | MPL-2.0 | [Source](https://registry.npmjs.org/lightningcss/-/lightningcss-1.33.0.tgz) | [5c8fb0796b67b431](#license-5c8fb0796b67b431) |
 | npm | locate-path | 6.0.0 | MIT | [Source](https://registry.npmjs.org/locate-path/-/locate-path-6.0.0.tgz) | [1529f88b36750950](#license-1529f88b36750950) |
 | npm | lodash-es | 4.18.1 | MIT | [Source](https://registry.npmjs.org/lodash-es/-/lodash-es-4.18.1.tgz) | [2314aa0e2bae2fcb](#license-2314aa0e2bae2fcb) |
@@ -970,6 +970,7 @@ DOMPurify is used under its Apache-2.0 option. Other OR or slash-separated licen
 | npm | ts-dedent | 2.3.0 | MIT | [Source](https://registry.npmjs.org/ts-dedent/-/ts-dedent-2.3.0.tgz) | [1078bbb5b87d7787](#license-1078bbb5b87d7787) |
 | npm | type-check | 0.4.0 | MIT | [Source](https://registry.npmjs.org/type-check/-/type-check-0.4.0.tgz) | [0e677f246e846898](#license-0e677f246e846898) |
 | npm | typescript | 5.8.3 | Apache-2.0 | [Source](https://registry.npmjs.org/typescript/-/typescript-5.8.3.tgz) | [d446a8c73d7bbe48](#license-d446a8c73d7bbe48) |
+| npm | undici-types | 7.24.6 | MIT | [Source](https://registry.npmjs.org/undici-types/-/undici-types-7.24.6.tgz) | [fe64958bfaef10b1](#license-fe64958bfaef10b1) |
 | npm | unified | 11.0.5 | MIT | [Source](https://registry.npmjs.org/unified/-/unified-11.0.5.tgz) | [e453dafb35c9b3cb](#license-e453dafb35c9b3cb) |
 | npm | unist-util-find-after | 5.0.0 | MIT | [Source](https://registry.npmjs.org/unist-util-find-after/-/unist-util-find-after-5.0.0.tgz) | [c37a32dd1cd44e7b](#license-c37a32dd1cd44e7b) |
 | npm | unist-util-is | 6.0.1 | MIT | [Source](https://registry.npmjs.org/unist-util-is/-/unist-util-is-6.0.1.tgz) | [a1563f431b1fa6bd](#license-a1563f431b1fa6bd) |
@@ -9335,37 +9336,6 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-<a id="license-4cdb9a53bdd8ef82"></a>
-
-### 4cdb9a53bdd8ef82
-
-- https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz — LICENSE
-
-```text
-MIT License
------------
-
-Copyright (C) 2010-2020 by Philipp Dunkel, Ben Noordhuis, Elan Shankar, Paul Miller
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-```
-
 <a id="license-4d83b119f786daf6"></a>
 
 ### 4d83b119f786daf6
@@ -10383,7 +10353,7 @@ DEALINGS IN THE SOFTWARE.
 
 ### 5c8fb0796b67b431
 
-- https://registry.npmjs.org/lightningcss-darwin-arm64/-/lightningcss-darwin-arm64-1.33.0.tgz — LICENSE
+- https://registry.npmjs.org/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.33.0.tgz — LICENSE
 - https://registry.npmjs.org/lightningcss/-/lightningcss-1.33.0.tgz — LICENSE
 
 ```text
@@ -29006,6 +28976,36 @@ Apache License
    limitations under the License.
 ```
 
+<a id="license-fe64958bfaef10b1"></a>
+
+### fe64958bfaef10b1
+
+- https://registry.npmjs.org/undici-types/-/undici-types-7.24.6.tgz — LICENSE
+
+```text
+MIT License
+
+Copyright (c) Matteo Collina and Undici contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 <a id="license-ff1a2c6dd8fbc676"></a>
 
 ### ff1a2c6dd8fbc676
@@ -29084,6 +29084,7 @@ SOFTWARE.
 - https://registry.npmjs.org/@types/json-schema/-/json-schema-7.0.15.tgz — LICENSE
 - https://registry.npmjs.org/@types/mdast/-/mdast-4.0.4.tgz — LICENSE
 - https://registry.npmjs.org/@types/ms/-/ms-2.1.0.tgz — LICENSE
+- https://registry.npmjs.org/@types/node/-/node-25.9.9.tgz — LICENSE
 - https://registry.npmjs.org/@types/react-dom/-/react-dom-19.2.3.tgz — LICENSE
 - https://registry.npmjs.org/@types/react/-/react-19.2.17.tgz — LICENSE
 - https://registry.npmjs.org/@types/trusted-types/-/trusted-types-2.0.7.tgz — LICENSE
