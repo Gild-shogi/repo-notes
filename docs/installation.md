@@ -4,9 +4,18 @@
 
 ## 成果物の取得
 
-1. Actions の `Installer builds` で、取得する版・コミットと全ビルドの成功を確認する。
-2. Windows は `release-windows`、macOS は `release-macos` の artifact を取得して展開する。Windows インストーラーには WSL バックエンドを同梱している。
-3. タグ起点の実行では全成果物の成功後に Draft Release へ添付する経路がある。今回の検証ではタグ push・実際の Draft Release 作成は行っていない。
+タグ `v<版>` の push で `Installer builds` が全 OS をビルドし、全成果物の成功後に Draft Release へ添付する。Draft はリポジトリの書き込み権限を持つ人だけが閲覧・取得できる。
+
+| ファイル | 用途 |
+|---|---|
+| `repo-notes_<版>_windows_x64_setup.exe` | Windows UI のインストーラー。WSL バックエンドを同梱 |
+| `repo-notes_<版>_macos_universal.dmg` | macOS（Intel / Apple Silicon）のアプリ |
+| `repo-notes-backend_<版>_linux_x64.tar.gz` | WSL バックエンド単体。通常は Windows インストーラーが配備するため不要 |
+| `SHA256SUMS`・`release-manifest.json` | 照合用のハッシュと版情報 |
+
+1. Release ページから使う OS のファイルと `SHA256SUMS` を取得する。CLI では `gh release download v<版> -R Gild-shogi/repo-notes -p '<ファイル名>' -p SHA256SUMS`。
+2. 取得したファイルのハッシュを `SHA256SUMS` の同名行と照合する。macOS は `shasum -a 256 -c SHA256SUMS --ignore-missing` を使う。Windows は PowerShell の `Get-FileHash <ファイル名>` の値と比べる。
+3. タグを打っていないコミットを試す場合は、Actions の `Installer builds` から `release-windows` / `release-macos` の artifact を取得する。
 
 ## Windows の導入と接続
 
@@ -28,10 +37,10 @@
 
 UI とエージェントには同じ保存先を指定する。一覧が空なら、WSL の対象 Git リポジトリで既存スキルのメモ作成手順を実行して保存先を初期化し、UI の指定先と照合する。
 
-アプリの導入には Node.js / Rust での再ビルドは不要。エージェント用スキルの導入・更新には、既存の [スキルのインストール手順](getting-started.md#エージェント用スキルのインストール) を使う。ソース配布の Makefile がある場所では、配備済み backend を渡して再ビルドせず更新できる（以下は `0.1.0` の例）。
+アプリの導入には Node.js / Rust での再ビルドは不要。エージェント用スキルの導入・更新には、既存の [スキルのインストール手順](getting-started.md#エージェント用スキルのインストール) を使う。ソース配布の Makefile がある場所では、配備済み backend を渡して再ビルドせず更新できる（以下は `1.0.0` の例）。
 
 ```bash
-make BUILD_CLI=true APP_BINARY="$HOME/.local/share/repo-notes/backend/0.1.0/repo-notes-backend" install-skill
+make BUILD_CLI=true APP_BINARY="$HOME/.local/share/repo-notes/backend/1.0.0/repo-notes-backend" install-skill
 ```
 
 表示された操作を確認して `yes` を1回入力する。rulesync 管理下では、既存の `rulesync import --targets claudecode --global --features skills` による取り込みと、管理元 `~/claude-dotfiles/` の `./setup.sh` による同期を維持する。生成先を直接編集しない。
@@ -91,4 +100,5 @@ macOS `0.1.0` は [CI run 42934139488](https://github.com/Gild-shogi/repo-notes/
 | 再導入・アンインストール | 同版再導入の設定保持、サイレント削除後の WSL fixture 8ファイルの hash 保持。QA 設定だけを限定清掃し、所有プロセス残存0 | 別バージョンへのアップグレード、他の環境でのデータ保持 |
 | WSL 障害・接続先変更 | 版照合・切断・保存再送抑止などの実装と自動検証 | WSL 未導入・再起動からの一連の実復旧、Ubuntu 以外の distro、完全オフライン導入 |
 | macOS | universal DMG のビルド、macOS 15.8.2 / Apple Silicon での導入・embedded 起動・CRUD・CLI 更新の監視反映・本文検索・pin・静的 HTML・Mermaid・同版再導入とデータ保持 | macOS 13 / Intel 実機、異なる版への更新、開発ツール未導入 Mac、ブラウザ取得後の Gatekeeper 判定、画像アセット・外部アプリ・印刷・クリップボードの実操作 |
-| 署名・Release | 未署名の検証用配布に限定する公開 gate | Developer ID / 公証、Windows 署名、タグ起点の実 Draft Release 作成・一般公開 |
+| `1.0.0`・新識別子 | Draft Release の成果物からの導入・初回起動・ノートの読み込み | 新識別子でのノートの作成・編集・削除と再導入、旧識別子の検証版からの切り替え |
+| 署名・Release | 未署名の検証用配布に限定する公開 gate、タグ `v1.0.0` から全成果物を添付した Draft Release の作成（[run 43568774723](https://github.com/Gild-shogi/repo-notes/actions/runs/43568774723)） | Developer ID / 公証、Windows 署名、一般公開 |
