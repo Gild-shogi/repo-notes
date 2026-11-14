@@ -100,5 +100,5 @@ macOS `0.1.0` は [CI run 42934139488](https://github.com/Gild-shogi/repo-notes/
 | 再導入・アンインストール | 同版再導入の設定保持、サイレント削除後の WSL fixture 8ファイルの hash 保持。QA 設定だけを限定清掃し、所有プロセス残存0 | 別バージョンへのアップグレード、他の環境でのデータ保持 |
 | WSL 障害・接続先変更 | 版照合・切断・保存再送抑止などの実装と自動検証 | WSL 未導入・再起動からの一連の実復旧、Ubuntu 以外の distro、完全オフライン導入 |
 | macOS | universal DMG のビルド、macOS 15.8.2 / Apple Silicon での導入・embedded 起動・CRUD・CLI 更新の監視反映・本文検索・pin・静的 HTML・Mermaid・同版再導入とデータ保持 | macOS 13 / Intel 実機、異なる版への更新、開発ツール未導入 Mac、ブラウザ取得後の Gatekeeper 判定、画像アセット・外部アプリ・印刷・クリップボードの実操作 |
-| `1.0.0`・新識別子 | Draft Release の成果物からの導入と初回起動 | 新識別子での WSL 接続・CRUD・再導入、旧識別子の検証版からの切り替え |
+| `1.0.0`・新識別子 | Draft Release の成果物からの導入・初回起動・ノートの読み込み | 新識別子でのノートの作成・編集・削除と再導入、旧識別子の検証版からの切り替え |
 | 署名・Release | 未署名の検証用配布に限定する公開 gate、タグ `v1.0.0` から全成果物を添付した Draft Release の作成（[run 43568774723](https://github.com/Gild-shogi/repo-notes/actions/runs/43568774723)） | Developer ID / 公証、Windows 署名、一般公開 |
