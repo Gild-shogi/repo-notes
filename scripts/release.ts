@@ -9,18 +9,52 @@ type BackendManifest = Version & { sha256: string };
 const backendDir = "src-tauri/resources/backend";
 const json = (path: string): unknown => JSON.parse(readFileSync(path, "utf8"));
 const sha256 = (path: string): string => createHash("sha256").update(readFileSync(path)).digest("hex");
+const NUMBER = "(?:0|[1-9]\\d*)";
+const PRERELEASE = `(?:${NUMBER}|\\d*[A-Za-z-][0-9A-Za-z-]*)`;
+const VERSION = new RegExp(`^${NUMBER}\\.${NUMBER}\\.${NUMBER}(?:-${PRERELEASE}(?:\\.${PRERELEASE})*)?(?![\\s\\S])`);
 
 function projectVersion(tag?: string): Version {
   const packageVersion = (json("package.json") as { version: string }).version;
   const tauriVersion = (json("src-tauri/tauri.conf.json") as { version: string }).version;
   const cargo = readFileSync("src-tauri/Cargo.toml", "utf8").split(/^\[/m).find((section) => section.startsWith("package]"));
   const cargoVersion = cargo?.match(/^version\s*=\s*"([^"]+)"\s*$/m)?.[1];
-  if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/.test(packageVersion) || cargoVersion !== packageVersion || tauriVersion !== packageVersion || (tag !== undefined && tag !== `v${packageVersion}`)) {
+  if (!VERSION.test(packageVersion) || cargoVersion !== packageVersion || tauriVersion !== packageVersion || (tag !== undefined && tag !== `v${packageVersion}`)) {
     throw new Error("release version mismatch: tag, package.json, Cargo.toml and tauri.conf.json must match");
   }
   const protocol = readFileSync("src-tauri/src/backend.rs", "utf8").match(/^pub const PROTOCOL_VERSION: u32 = (\d+);$/m)?.[1];
   if (protocol === undefined) throw new Error("backend protocol version was not found");
   return { version: packageVersion, protocolVersion: Number(protocol) };
+}
+
+function prepareBuild(tag?: string): Version {
+  if (tag === undefined) return projectVersion();
+  const version = tag.startsWith("v") ? tag.slice(1) : "";
+  if (!VERSION.test(version)) throw new Error("invalid release tag: expected vX.Y.Z, for example v1.0.0");
+  projectVersion();
+  const cargo = readFileSync("src-tauri/Cargo.toml", "utf8");
+  const section = cargo.split(/(?=^\[)/m).find((part) => part.startsWith("[package]"));
+  const name = section?.match(/^name\s*=\s*"([^"]+)"/m)?.[1];
+  if (!section || !name) throw new Error("Cargo package name was not found");
+  const stamp = (text: string) => text.replace(/^(version[ \t]*=[ \t]*")[^"]+(")/m, (_match, prefix, suffix) => `${prefix}${version}${suffix}`);
+  let matched = 0;
+  const lock = readFileSync("src-tauri/Cargo.lock", "utf8").split(/(?=^\[\[package\]\])/m).map((part) => {
+    if (part.match(/^name\s*=\s*"([^"]+)"/m)?.[1] !== name) return part;
+    if (!/^version[ \t]*=[ \t]*"[^"]+"/m.test(part)) throw new Error("Cargo.lock app version was not found");
+    matched += 1;
+    return stamp(part);
+  }).join("");
+  if (matched !== 1) throw new Error("Cargo.lock must contain exactly one app package");
+  const packageJson = json("package.json") as { version: string };
+  const tauri = json("src-tauri/tauri.conf.json") as { version: string };
+  packageJson.version = version;
+  tauri.version = version;
+  for (const [file, content] of [
+    ["package.json", JSON.stringify(packageJson, null, 2) + "\n"],
+    ["src-tauri/tauri.conf.json", JSON.stringify(tauri, null, 2) + "\n"],
+    ["src-tauri/Cargo.toml", cargo.replace(section, stamp(section))],
+    ["src-tauri/Cargo.lock", lock],
+  ]) writeFileSync(file, content);
+  return projectVersion(tag);
 }
 
 function verifyBackend(directory: string): BackendManifest {
@@ -181,7 +215,9 @@ function outputs(values: Record<string, string | number | boolean>) {
 
 try {
   const [command, argument, second, third, fourth] = process.argv.slice(2);
-  if (command === "check") outputs(projectVersion(argument ?? (process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : undefined)));
+  if (command === "prepare-build" && argument === "--help") console.log("Usage: node scripts/release.ts prepare-build [vX.Y.Z]\n\nTag builds write the tag version to package.json, Tauri, Cargo.toml and Cargo.lock. Other builds only check the repository version. The tag defaults to GITHUB_REF_NAME when GITHUB_REF_TYPE=tag.\n\nExamples:\n  node scripts/release.ts prepare-build v1.0.0\n  node scripts/release.ts prepare-build");
+  else if (command === "prepare-build") outputs(prepareBuild(argument ?? (process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : undefined)));
+  else if (command === "check") outputs(projectVersion(argument ?? (process.env.GITHUB_REF_TYPE === "tag" ? process.env.GITHUB_REF_NAME : undefined)));
   else if (command === "stage-backend" && argument) outputs(stageBackend(argument));
   else if (command === "verify-backend") outputs(verifyBackend(argument ?? backendDir));
   else if (command === "package-backend" && argument) packageBackend(argument);
